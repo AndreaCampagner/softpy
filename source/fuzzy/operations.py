@@ -80,6 +80,13 @@ def drasticsum(a: Type[FuzzySet], b: Type[FuzzySet]):
 
     
 def weighted_average(arr, w):
+    '''
+    This implementation heavily relies on the fact that the weighted average is an associative operator. Indeed,
+    w_1*v_1 + w_2*v_2 + ... + w_n*v_n = w_1*v1 + 1*(w_2*v2 + 1*(... + w_n*v_n))
+    Could be implemented in a simpler way by simply allowing FuzzyCombination to take an array (rather than a pair) of
+    argument
+    '''
+
     if not issubclass(type(arr), list) and not issubclass(type(arr), np.ndarray) and not issubclass(type(arr), tuple):
         raise TypeError("arr should be a sequence")
     
@@ -127,7 +134,15 @@ def owa(arr, w):
 
 
 class ContinuousFuzzyOWA(ContinuousFuzzySet):
+    '''
+    Support class to implement the OWA operation between ContinuousFuzzySet instances.
+    Notice: the result of OWA on ContinuousFuzzySet instances is a ContinuousFuzzySet
+    '''
+
     def __init__(self, fuzzysets, weights):
+        '''
+        The constructor searches the given fuzzysets in order to determine the minimum and maximum of the result of OWA
+        '''
         if not issubclass(type(fuzzysets), list) and not issubclass(type(fuzzysets), np.ndarray) and not issubclass(type(fuzzysets), tuple):
             raise TypeError("arr should be a sequence")
         
@@ -154,6 +169,9 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
         self.weights = np.array(weights)
 
     def __call__(self, arg):
+        '''
+        Simply computes the membership degree of arg by evaluating the OWA with the given weights
+        '''
         if isinstance(arg, tuple):
             ms = np.sort([self.fuzzysets[i](arg[i]) for i in range(len(self.fuzzysets))])
             return np.sum(ms*self.weights)  
@@ -166,6 +184,14 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
 
 
 class DiscreteFuzzyOWA(DiscreteFuzzySet):
+    '''
+    Support class to implement the OWA operation between DiscreteFuzzySet instances.
+    The OWA operator is actually implemented in the constructor, that build a new DiscreteFuzzySet
+    by computing the appropriate values of the membership degrees. All other methods directly rely on
+    the base implementation of DiscreteFuzzySet
+    Notice: the result of OWA on DiscreteFuzzySet instances is a DiscreteFuzzySet
+    '''
+
     def __init__(self, fuzzysets, weights, dynamic=True):
         if not issubclass(type(fuzzysets), list) and not issubclass(type(fuzzysets), np.ndarray) and not issubclass(type(fuzzysets), tuple):
             raise TypeError("fuzzysets should be a sequence")
@@ -205,6 +231,9 @@ class DiscreteFuzzyOWA(DiscreteFuzzySet):
 
 
 class ContinuousFuzzyCombination(ContinuousFuzzySet):
+    '''
+    Implements a binary operator on ContinuousFuzzySet instances
+    '''
     def __init__(self, left: Type[ContinuousFuzzySet], right: Type[ContinuousFuzzySet], op=None):
         if not issubclass(type(left), ContinuousFuzzySet) or not issubclass(type(right), ContinuousFuzzySet):
             raise TypeError("All arguments should be continuous fuzzy sets")
@@ -225,6 +254,9 @@ class ContinuousFuzzyCombination(ContinuousFuzzySet):
         pass
 
 class DiscreteFuzzyCombination(DiscreteFuzzySet):
+    '''
+    Implements a binary operator on DiscreteFuzzySet instances
+    '''
     def __init__(self, left: Type[DiscreteFuzzySet], right: Type[DiscreteFuzzySet], op=None, dynamic=True):
         if not issubclass(type(left), DiscreteFuzzySet) or not issubclass(type(right), DiscreteFuzzySet):
             raise TypeError("All arguments should be discrete fuzzy sets")
@@ -264,6 +296,9 @@ class DiscreteFuzzyCombination(DiscreteFuzzySet):
     
 
 class ContinuousFuzzyNegation(ContinuousFuzzySet):
+    '''
+    Implements a unary operator on ContinuousFuzzySet instances
+    '''
     def __init__(self, f: Type[ContinuousFuzzySet], op=None):
         if not issubclass(type(f), ContinuousFuzzySet):
             raise TypeError("Argument should be continuous fuzzy set")

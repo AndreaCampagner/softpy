@@ -29,7 +29,15 @@ class DiscreteFuzzySet(FuzzySet):
     Implements a discrete fuzzy set
     
     '''
+
     def __init__(self, items, memberships, dynamic=True):
+        '''
+        Requires as input a sequence (list or array) or objects and a sequence (list or array) of membership degrees
+        Attribute dynamic controls whether the support set is exhaustive or not (i.e. there exist objects not in items
+        whose membership degree is 0)
+
+        Internally the constructor uses a dictionary (self.set) to enable fast look-up of membership degrees
+        '''
         if type(items) != list and type(items) != np.array:
             raise TypeError("items should be list or numpy.array")
         
@@ -52,6 +60,10 @@ class DiscreteFuzzySet(FuzzySet):
         self.dynamic = dynamic
 
     def __call__(self, arg):
+        '''
+        Gets the membership degree of arg. Uses self.set to enable quick look-up.
+        Behavior changes according to value of dynamic
+        '''
         if arg not in self.set.keys():
             if self.dynamic:
                 self.set[arg] = len(self.items)
@@ -63,6 +75,9 @@ class DiscreteFuzzySet(FuzzySet):
         return self.memberships[self.set[arg]]
         
     def __getitem__(self, alpha: np.number):
+        '''
+        Gets an alpha cut
+        '''
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -72,6 +87,9 @@ class DiscreteFuzzySet(FuzzySet):
         return self.items[self.memberships >= alpha]
     
     def __eq__(self, other: Type[DiscreteFuzzySet]):
+        '''
+        Checks whether two DiscreteFuzzySet instances are equal
+        '''
         for v in list(self.set.keys()) + list(other.set.keys()):
             try:
                 v1 = self(v)
@@ -87,6 +105,9 @@ class DiscreteFuzzySet(FuzzySet):
         return  True
     
     def fuzziness(self):
+        '''
+        Computes the fuzziness
+        '''
         try:
             return self.f
         except AttributeError:
@@ -98,6 +119,9 @@ class DiscreteFuzzySet(FuzzySet):
             return self.f
         
     def hartley(self):
+        '''
+        Computes the hartley entropy (non-specificity)
+        '''
         try:
             return self.h
         except AttributeError:
@@ -110,12 +134,21 @@ class DiscreteFuzzySet(FuzzySet):
     
 
 class ContinuousFuzzySet(FuzzySet):
-    '''Abstract class for a continuous fuzzy set'''
+    '''
+    Abstract class for a continuous fuzzy set
+    Note: each (bounded) continuous fuzzy set has a minimum and maximum elements s.t. their membership degrees are > 0
+    Epsilon is used to define an approximation degree for various operations that cannot be implemented exactly 
+    '''
     min : np.number
     max : np.number
     epsilon = 0.01
 
     def __getitem__(self, alpha):
+        '''
+        In general, it is not possible to take alpha cuts of continuous fuzzy sets analytically: we need to search
+        explicitly for all values whose membership degree is >= alpha. Since it is impossible to look all real numbers,
+        we do a grid search where the grid step-size is defined by epsilon
+        '''
         if np.issubdtype(type(alpha), tuple):
             alpha, self.epsilon = alpha[0], alpha[1]
 
@@ -133,6 +166,11 @@ class ContinuousFuzzySet(FuzzySet):
         return vals
     
     def fuzziness(self, epsilon=None):
+        '''
+        As in the case of alpha cuts, it is generally impossible to compute the fuzziness of a continuous fuzzy set
+        analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
+        values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
+        '''
         if epsilon is None:
             epsilon = self.epsilon
         else:
@@ -147,8 +185,16 @@ class ContinuousFuzzySet(FuzzySet):
 
 
 class FuzzyNumber(ContinuousFuzzySet):
-    '''Abstract class for a fuzzy number (convex, closed fuzzy set over the real numbers)'''
+    '''
+    Abstract class for a fuzzy number (convex, closed fuzzy set over the real numbers)
+    '''
+
     def hartley(self):
+        '''
+        In the case of fuzzy numbers it is easy to compute the hartley entropy, because we know that each
+        alpha cut is an interval. Thus, for each alpha, we simply compute the (logarithm of the) length
+        of the corresponding interval and then integrate over alpha
+        '''
         try:
             return self.h
         except AttributeError:
