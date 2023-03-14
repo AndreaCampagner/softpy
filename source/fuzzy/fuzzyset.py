@@ -2,7 +2,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import numpy as np
 import scipy as sp
-from typing import Type
 
 
 class FuzzySet(ABC):
@@ -21,6 +20,22 @@ class FuzzySet(ABC):
 
     @abstractmethod
     def hartley(self) -> np.number:
+        pass
+
+class LambdaFuzzySet(FuzzySet):
+    def __init__(self, func : function):
+        self.func = func
+
+    def __call__(self, arg) -> np.number:
+        return self.func(arg)
+    
+    def __getitem__(self, alpha):
+        pass
+
+    def fuzziness(self):
+        pass
+
+    def hartley(self):
         pass
 
 
