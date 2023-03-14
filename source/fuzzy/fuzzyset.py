@@ -8,7 +8,7 @@ from typing import Type
 class FuzzySet(ABC):
     '''Abstract Class for a generic fuzzy set'''
     @abstractmethod
-    def __call__(self, arg):
+    def __call__(self, arg) -> np.number:
         pass
 
     @abstractmethod
@@ -16,11 +16,11 @@ class FuzzySet(ABC):
         pass
 
     @abstractmethod
-    def fuzziness(self):
+    def fuzziness(self) -> np.number:
         pass
 
     @abstractmethod
-    def hartley(self):
+    def hartley(self) -> np.number:
         pass
 
 
@@ -74,7 +74,7 @@ class DiscreteFuzzySet(FuzzySet):
              
         return self.memberships[self.set[arg]]
         
-    def __getitem__(self, alpha: np.number):
+    def __getitem__(self, alpha: np.number) -> np.ndarray:
         '''
         Gets an alpha cut
         '''
@@ -86,10 +86,13 @@ class DiscreteFuzzySet(FuzzySet):
         
         return self.items[self.memberships >= alpha]
     
-    def __eq__(self, other: Type[DiscreteFuzzySet]):
+    def __eq__(self, other: object) -> bool:
         '''
         Checks whether two DiscreteFuzzySet instances are equal
         '''
+        if not isinstance(other, DiscreteFuzzySet):
+            return NotImplemented
+        
         for v in list(self.set.keys()) + list(other.set.keys()):
             try:
                 v1 = self(v)
@@ -104,7 +107,7 @@ class DiscreteFuzzySet(FuzzySet):
                 return False
         return  True
     
-    def fuzziness(self):
+    def fuzziness(self) -> np.number:
         '''
         Computes the fuzziness
         '''
@@ -115,10 +118,10 @@ class DiscreteFuzzySet(FuzzySet):
             pos = pos*np.log2(1/pos)
             non = self.memberships[self.memberships < 1]
             non = (1-non)*np.log2(1/(1-non))
-            self.f = np.sum(pos) + np.sum(non)
+            self.f : np.number = np.sum(pos) + np.sum(non)
             return self.f
         
-    def hartley(self):
+    def hartley(self) -> np.number:
         '''
         Computes the hartley entropy (non-specificity)
         '''
@@ -129,7 +132,7 @@ class DiscreteFuzzySet(FuzzySet):
             sort = np.append(np.sort(pos)[::-1], 0)
             coeffs = sort[:-1] - sort[1:]
             sizes = np.log2(np.array([len(self[i]) for i in sort[:-1]]))
-            self.h = np.sum(coeffs*sizes)
+            self.h : np.number = np.sum(coeffs*sizes)
             return self.h
     
 
@@ -143,14 +146,12 @@ class ContinuousFuzzySet(FuzzySet):
     max : np.number
     epsilon = 0.01
 
-    def __getitem__(self, alpha):
+    def __getitem__(self, alpha: np.number) -> np.ndarray | tuple:
         '''
         In general, it is not possible to take alpha cuts of continuous fuzzy sets analytically: we need to search
         explicitly for all values whose membership degree is >= alpha. Since it is impossible to look all real numbers,
         we do a grid search where the grid step-size is defined by epsilon
         '''
-        if np.issubdtype(type(alpha), tuple):
-            alpha, self.epsilon = alpha[0], alpha[1]
 
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
@@ -158,29 +159,24 @@ class ContinuousFuzzySet(FuzzySet):
         if alpha < 0 or alpha > 1:
             raise ValueError("Alpha should be in [0,1], is %s" % alpha)
         
-        if not np.issubdtype(type(self.epsilon), np.number):
-            raise TypeError("Epsilon should be a float, is %s" % type(alpha))
+        
         
         grid = np.linspace(self.min, self.max, int((self.max - self.min)/self.epsilon))
-        vals = [v if self(v) >= alpha else np.nan for v in grid]
+        vals = np.array([v if self(v) >= alpha else np.nan for v in grid])
         return vals
     
-    def fuzziness(self, epsilon=None):
+    def fuzziness(self) -> np.number:
         '''
         As in the case of alpha cuts, it is generally impossible to compute the fuzziness of a continuous fuzzy set
         analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
         values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
         '''
-        if epsilon is None:
-            epsilon = self.epsilon
-        else:
-            self.epsilon = epsilon
 
         try:
             return self.f
         except AttributeError:
             func_int = lambda x: 0 if (np.abs(x - 0) <= self.epsilon or np.abs(x - 1) <= self.epsilon) else self(x)*np.log(1/self(x)) + (1 - self(x))*np.log2(1/(1-self(x)))
-            self.f = sp.integrate.quad(func_int, self.min, self.max, epsabs=self.epsilon)[0]
+            self.f : np.number = sp.integrate.quad(func_int, self.min, self.max, epsabs=self.epsilon)[0]
             return self.f
 
 
@@ -189,7 +185,7 @@ class FuzzyNumber(ContinuousFuzzySet):
     Abstract class for a fuzzy number (convex, closed fuzzy set over the real numbers)
     '''
 
-    def hartley(self):
+    def hartley(self) -> np.number:
         '''
         In the case of fuzzy numbers it is easy to compute the hartley entropy, because we know that each
         alpha cut is an interval. Thus, for each alpha, we simply compute the (logarithm of the) length
@@ -199,7 +195,7 @@ class FuzzyNumber(ContinuousFuzzySet):
             return self.h
         except AttributeError:
             func_int = lambda x: np.log2(self[x][1] - self[x][0])
-            self.h = sp.integrate.quad(func_int, 0, 1)[0]
+            self.h : np.number = sp.integrate.quad(func_int, 0, 1)[0]
             return self.h 
 
 
@@ -222,16 +218,16 @@ class IntervalFuzzyNumber(FuzzyNumber):
         self.min = lower
         self.max = upper
 
-    def __call__(self, arg: np.number):
+    def __call__(self, arg: np.number) -> np.number:
         if not np.issubdtype(type(arg), np.number):
             raise TypeError("Arg should be float, is %s" % type(arg))
         
         if arg < self.lower or arg > self.upper:
-            return 0
+            return 0.0
         else:
-            return 1
+            return 1.0
         
-    def __getitem__(self, alpha: np.number):
+    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -240,13 +236,15 @@ class IntervalFuzzyNumber(FuzzyNumber):
         
         return self.lower, self.upper
     
-    def __eq__(self, other: Type[IntervalFuzzyNumber]):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, IntervalFuzzyNumber):
+            return NotImplemented
         return self.lower == other.lower and self.upper == other.upper
     
-    def fuzziness(self):
-        return 0
+    def fuzziness(self) -> np.number:
+        return 0.0
     
-    def hartley(self):
+    def hartley(self) -> np.number:
         return np.log2(self.upper - self.lower)
     
 
@@ -267,7 +265,7 @@ class RampFuzzyNumber(FuzzyNumber):
         self.min = np.min([lower,upper])
         self.max = np.max([lower,upper])
 
-    def __call__(self, arg: np.number):
+    def __call__(self, arg: np.number) -> np.number:
         if not np.issubdtype(type(arg), np.number):
             raise TypeError("Arg should be float, is %s" % type(arg))
         
@@ -285,7 +283,7 @@ class RampFuzzyNumber(FuzzyNumber):
         return (arg - self.lower)/(self.upper - self.lower)
         
         
-    def __getitem__(self, alpha: np.number):
+    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -298,16 +296,18 @@ class RampFuzzyNumber(FuzzyNumber):
         else:
             return self.upper, x
     
-    def __eq__(self, other: Type[RampFuzzyNumber]):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RampFuzzyNumber):
+            return NotImplemented
         return self.lower == other.lower and self.upper == other.upper
     
-    def fuzziness(self):
+    def fuzziness(self) -> np.number:
         try:
             return self.f
         except AttributeError:
             func = lambda x: (x - self.lower)/(self.upper - self.lower)
             func_int = lambda x: func(x)*np.log(1/func(x)) + (1 - func(x))*np.log2(1/(1-func(x)))
-            self.f = sp.integrate.quad(func_int, self.lower, self.upper)[0]
+            self.f : np.number = sp.integrate.quad(func_int, self.lower, self.upper)[0]
             return self.f
 
 
@@ -340,7 +340,7 @@ class TriangularFuzzyNumber(FuzzyNumber):
         self.min = lower
         self.max = upper
 
-    def __call__(self, arg: np.number):
+    def __call__(self, arg: np.number) -> np.number:
         if not np.issubdtype(type(arg), np.number):
             raise TypeError("Arg should be float, is %s" % type(arg))
         
@@ -348,10 +348,10 @@ class TriangularFuzzyNumber(FuzzyNumber):
             return 0
         elif arg >= self.lower and arg <= self.middle:
             return (arg - self.lower)/(self.middle - self.lower)
-        elif arg >= self.middle and arg <= self.upper:
+        else:
             return (self.upper - arg)/(self.upper - self.middle)
         
-    def __getitem__(self, alpha: np.number):
+    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -363,10 +363,12 @@ class TriangularFuzzyNumber(FuzzyNumber):
         
         return low, upp
     
-    def __eq__(self, other: Type[TriangularFuzzyNumber]):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TriangularFuzzyNumber):
+            return NotImplemented
         return self.lower == other.lower and self.middle == other.middle and self.upper == other.upper
     
-    def fuzziness(self):
+    def fuzziness(self) -> np.number:
         try:
             return self.f
         except AttributeError:
@@ -374,7 +376,7 @@ class TriangularFuzzyNumber(FuzzyNumber):
             right = lambda x: (self.upper - x)/(self.upper - self.middle)
             left_int = lambda x: left(x)*np.log(1/left(x)) + (1 - left(x))*np.log2(1/(1-left(x)))
             right_int = lambda x: right(x)*np.log(1/right(x)) + (1 - right(x))*np.log2(1/(1-right(x)))
-            self.f = sp.integrate.quad(left_int, self.lower, self.middle)[0]
+            self.f : np.number = sp.integrate.quad(left_int, self.lower, self.middle)[0]
             self.f += sp.integrate.quad(right_int, self.middle, self.upper)[0]
             return self.f
         
@@ -412,7 +414,7 @@ class TrapezoidalFuzzyNumber(FuzzyNumber):
         self.min = lower
         self.max = upper
 
-    def __call__(self, arg: np.number):
+    def __call__(self, arg: np.number) -> np.number:
         if not np.issubdtype(type(arg), np.number):
             raise TypeError("Arg should be float, is %s" % type(arg))
         
@@ -422,10 +424,10 @@ class TrapezoidalFuzzyNumber(FuzzyNumber):
             return (arg - self.lower)/(self.middle1 - self.lower)
         elif self.middle1 <= arg <= self.middle2:
             return 1
-        elif self.middle2 <= arg <= self.upper:
+        else:
             return (self.upper - arg)/(self.upper - self.middle2)
         
-    def __getitem__(self, alpha: np.number):
+    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -437,10 +439,12 @@ class TrapezoidalFuzzyNumber(FuzzyNumber):
         
         return low, upp
     
-    def __eq__(self, other: Type[TrapezoidalFuzzyNumber]):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TrapezoidalFuzzyNumber):
+            return NotImplemented
         return self.lower == other.lower and self.middle1 == other.middle1 and self.middle2 == other.middle2 and self.upper == other.upper
     
-    def fuzziness(self):
+    def fuzziness(self) -> np.number:
         try:
             return self.f
         except AttributeError:
@@ -448,6 +452,6 @@ class TrapezoidalFuzzyNumber(FuzzyNumber):
             right = lambda x: (self.upper - x)/(self.upper - self.middle2)
             left_int = lambda x: left(x)*np.log(1/left(x)) + (1 - left(x))*np.log2(1/(1-left(x)))
             right_int = lambda x: right(x)*np.log(1/right(x)) + (1 - right(x))*np.log2(1/(1-right(x)))
-            self.f = sp.integrate.quad(left_int, self.lower, self.middle1)[0]
+            self.f : np.number = sp.integrate.quad(left_int, self.lower, self.middle1)[0]
             self.f += sp.integrate.quad(right_int, self.middle2, self.upper)[0]
             return self.f
