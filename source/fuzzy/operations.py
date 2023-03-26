@@ -239,7 +239,7 @@ def maximum(a: FuzzySet, b: FuzzySet):
     elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
         return ContinuousFuzzyCombination(a,b, op=np.maximum)
     else:
-        return FuzzyCombination(a,b, op=maximum)
+        return FuzzyCombination(a,b, op=np.maximum)
     
 def product(a: FuzzySet, b: FuzzySet):
     if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
@@ -300,7 +300,7 @@ def weighted_average(arr: Sequence[FuzzySet], w : Sequence[np.number]):
     This implementation heavily relies on the fact that the weighted average is an associative operator. Indeed,
     w_1*v_1 + w_2*v_2 + ... + w_n*v_n = w_1*v1 + 1*(w_2*v2 + 1*(... + w_n*v_n))
     Could be implemented in a simpler way by simply allowing FuzzyCombination to take an array (rather than a pair) of
-    argument
+    arguments
     '''
 
     if not isinstance(arr, list) and not isinstance(arr, np.ndarray) and not isinstance(arr, tuple):
