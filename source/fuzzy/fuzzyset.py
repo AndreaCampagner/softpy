@@ -53,10 +53,10 @@ class DiscreteFuzzySet(FuzzySet):
 
         Internally the constructor uses a dictionary (self.set) to enable fast look-up of membership degrees
         '''
-        if type(items) != list and type(items) != np.array:
+        if type(items) != list and type(items) != np.ndarray:
             raise TypeError("items should be list or numpy.array")
         
-        if type(memberships) != list and type(memberships) != np.array:
+        if type(memberships) != list and type(memberships) != np.ndarray:
             raise TypeError("memberships should be list or numpy.array")
         
         if type(dynamic) != bool:
