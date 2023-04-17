@@ -6,7 +6,8 @@ from .operations import negation
 from .operations import owa, weighted_average
 from .operations import DiscreteFuzzyCombination, DiscreteFuzzyOWA
 from .operations import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyOWA
-from .control import MamdaniRule
+from .control import MamdaniRule, SugenoRule, FuzzyControlSystem
+from .clustering import FuzzyCMeans
 
 __all__ = [
     "FuzzySet",
@@ -33,5 +34,8 @@ __all__ = [
     "ContinuousFuzzyCombination",
     "ContinuousFuzzyNegation", 
     "ContinuousFuzzyOWA",
-    "MamdaniRule"
+    "MamdaniRule",
+    "SugenoRule",
+    "FuzzyControlSystem",
+    "FuzzyCMeans"
 ]
