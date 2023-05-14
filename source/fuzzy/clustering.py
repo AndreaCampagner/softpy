@@ -18,6 +18,7 @@ class FuzzyCMeans(BaseEstimator,ClusterMixin):
     self.cluster_assignments = np.zeros((X.shape[0], self.n_clusters))
     for it in range(self.iters):
       dists = pairwise_distances(X, self.centroids, metric=self.metric)
+
       self.cluster_assignments = (dists+self.epsilon)**(2/(1-self.fuzzifier))/(np.sum((dists+self.epsilon)**(2/(1-self.fuzzifier)), axis=1)[:,np.newaxis])
       
       for k in range(self.n_clusters):
