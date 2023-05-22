@@ -1,6 +1,6 @@
 from .genetic import GeneticAlgorithm
 from .selection import tournament_selection, fitness_prop_selection
-from .candidate import Candidate, BitVectorCandidate, FloatVectorCandidate
+from .candidate import Candidate, BitVectorCandidate, FloatVectorCandidate, PathCandidate
 
 all = [
     "GeneticAlgorithm",
@@ -8,5 +8,6 @@ all = [
     "fitness_prop_selection",
     "Candidate",
     "BitVectorCandidate",
-    "FloatVectorCandidate"
+    "FloatVectorCandidate",
+    "PathCandidate"
 ]
