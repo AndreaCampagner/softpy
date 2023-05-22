@@ -52,12 +52,14 @@ class GeneticAlgorithm(EvolutionaryAlgorithm):
             sub = self.n_elite if self.elitism else 0
             current_step = None
 
-            idx = np.random.permutation(self.fitness)
+            idx = np.random.permutation(range(len(self.fitness)))
             self.population = self.population[idx]
             self.fitness = self.fitness[idx]
             for s in range(int((self.pop_size - sub)/2)):
-                p1, current_step = self.population[self.selection_func(self.fitness, current_step=current_step)]
-                p2, current_step = self.population[self.selection_func(self.fitness, current_step=current_step)]
+                px1, current_step = self.selection_func(self.fitness, current_step=current_step)
+                p1 = self.population[px1]
+                px2, current_step = self.selection_func(self.fitness, current_step=current_step)
+                p2 = self.population[px2]
                 q[i] = p1.recombine(p2).mutate()
                 q[i+1] = p2.recombine(p1).mutate()
                 i += 2
