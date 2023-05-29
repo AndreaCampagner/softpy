@@ -1,14 +1,8 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
 import numpy as np
+from evolutionary.singlestate import MetaHeuristicsAlgorithm
 
-
-class EvolutionaryAlgorithm(ABC):
-    @abstractmethod
-    def fit(self, n_iters=10, keep_history=False):
-        pass
-
-class GeneticAlgorithm(EvolutionaryAlgorithm):
+class GeneticAlgorithm(MetaHeuristicsAlgorithm):
 
     def __init__(self, pop_size: int, candidate_type, selection_func, fitness_func, elitism=False, n_elite=1, **kwargs):
         self.pop_size = pop_size
@@ -68,7 +62,7 @@ class GeneticAlgorithm(EvolutionaryAlgorithm):
         return self.best
     
 
-class SteadyStateGeneticAlgorithm(EvolutionaryAlgorithm):
+class SteadyStateGeneticAlgorithm(MetaHeuristicsAlgorithm):
     def __init__(self, pop_size: int, candidate_type, selection_func, fitness_func, **kwargs):
         self.pop_size = pop_size
         self.selection_func = selection_func
