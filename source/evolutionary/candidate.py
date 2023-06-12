@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import numpy as np
 import scipy.stats as stats
+from copy import deepcopy
 
 
 class Candidate(ABC):
@@ -161,3 +162,124 @@ class PathCandidate(Candidate):
                 new_path.append(node)
         
         return PathCandidate(new_path, self.graph, self.max_length)
+    
+
+class TreeCandidate(Candidate):
+
+    class NodeCandidate:
+        def __init__(self, function, children, depth = 1, parent=None, child_id=None):
+            self.function = function
+            self.children = children
+            self.depth = depth
+            self.parent = parent
+            self.child_id = child_id
+
+    def __init__(self, root: TreeCandidate.NodeCandidate, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob):
+        self.root = root
+        self.function_set = function_set
+        self.arities = arities
+        self.max_absolute_depth = max_absolute_depth
+        self.constant_generator = constant_generator
+        self.stop_early_prob = stop_early_prob
+
+    def generate(function_set, arities, max_depth, max_absolute_depth, constant_generator, stop_early_prob = 0.0) -> TreeCandidate:
+        depth = 1
+        parent = None
+
+        nodes = []
+
+        if depth >= max_depth:
+            val = constant_generator()
+            nodes.append(TreeCandidate.NodeCandidate(val, None, depth, parent, None))
+        else:
+            idx = np.random.choice(range(len(function_set)))
+            fun = function_set[idx]
+            ari = arities[idx]
+            nodes.append(TreeCandidate.NodeCandidate(fun, np.empty(ari, dtype=TreeCandidate.NodeCandidate), depth, parent, None))
+            
+
+        root = nodes[0]
+
+        while len(nodes) != 0:
+            node: TreeCandidate.NodeCandidate = nodes.pop()
+            num = 0 if node.children is None else len(node.children)
+            depth = node.depth
+            for i in range(num):
+                r = np.random.rand()
+                if (depth + 1 == max_depth) or (r < stop_early_prob):
+                    val = constant_generator()
+                    child = TreeCandidate.NodeCandidate(val, None, depth+1, node, i)
+                elif depth + 1 < max_depth:
+                    idx = np.random.choice(range(len(function_set)))
+                    fun = function_set[idx]
+                    ari = arities[idx]
+                    child = TreeCandidate.NodeCandidate(fun, np.empty(ari, dtype=TreeCandidate.NodeCandidate), depth+1, node, i)
+                    nodes.append(child)
+
+                node.children[i] = child
+
+        return TreeCandidate(root, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob)
+
+
+    def mutate(self) -> TreeCandidate:
+        nodes = [self.root]
+        while len(nodes) != 0:
+            node: TreeCandidate.NodeCandidate = nodes.pop()
+            r = np.random.rand()
+            if node.depth == self.max_absolute_depth or r < self.stop_early_prob:
+                node.function = self.constant_generator()
+                node.children = None
+            else:
+                num = 0 if node.children is None else len(node.children)
+                for i in range(num):
+                    nodes.append(node.children[i])
+
+        return self
+
+
+    def recombine(self, c: TreeCandidate) -> TreeCandidate:
+        rec_tree = deepcopy(self)
+        nodes_self = []
+        queue_self = [rec_tree.root]
+
+        while len(queue_self) != 0:
+            node: TreeCandidate.NodeCandidate = queue_self.pop()
+            nodes_self.append(node)
+            num = 0 if node.children is None else len(node.children)
+            for i in range(num):
+                queue_self.append(node.children[i])
+
+        old: TreeCandidate.NodeCandidate = np.random.choice(nodes_self)
+
+        nodes_c = []
+        queue_c = [c.root]
+
+        while len(queue_c) != 0:
+            node: TreeCandidate.NodeCandidate = queue_c.pop()
+            nodes_c.append(node)
+            num = 0 if node.children is None else len(node.children)
+            for i in range(num):
+                queue_c.append(node.children[i])
+
+        new: TreeCandidate.NodeCandidate = deepcopy(np.random.choice(nodes_c))
+
+
+        parent_old : TreeCandidate.NodeCandidate = old.parent
+        idx = old.child_id
+        depth = old.depth
+
+        if parent_old is not None:
+            parent_old.children[idx] = new
+        new.parent = parent_old
+        new.child_id = idx
+        new.depth = depth
+        nodes = [new]
+        while len(nodes) != 0:
+            node: TreeCandidate.NodeCandidate = nodes.pop()
+            num = 0 if node.children is None else len(node.children)
+            depth = node.depth
+            for i in range(num):
+                node.children[i].depth = depth + 1
+                nodes.append(node.children[i])
+        
+        return rec_tree

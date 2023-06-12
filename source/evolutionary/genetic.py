@@ -13,7 +13,7 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.elitism = elitism
         self.n_elite = n_elite
 
-    def fit(self, n_iters=10, keep_history=False):
+    def fit(self, n_iters=10, keep_history=False, show_iters=False):
         if self.elitism and (self.pop_size + self.n_elite)%2 != 0:
             self.pop_size += 1
 
@@ -28,6 +28,8 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
             self.fitness_h[:] = np.NINF
 
         for it in range(n_iters+1):
+            if show_iters:
+                print(it)
             self.fitness = np.vectorize(self.fitness_func)(self.population)
             v = np.max(self.fitness)
             self.best = self.population[np.argmax(self.fitness)] if v > self.fitness_best else self.best
