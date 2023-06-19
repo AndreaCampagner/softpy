@@ -1,7 +1,7 @@
 from .genetic import GeneticAlgorithm, SteadyStateGeneticAlgorithm
 from .singlestate import HillClimbing, RandomSearch
 from .selection import tournament_selection, fitness_prop_selection
-from .candidate import Candidate, BitVectorCandidate, FloatVectorCandidate, PathCandidate, TreeCandidate
+from .candidate import Candidate, BitVectorCandidate, FloatVectorCandidate, PathCandidate, TreeCandidate, DictionaryCandidate
 
 all = [
     "GeneticAlgorithm",
@@ -14,5 +14,6 @@ all = [
     "BitVectorCandidate",
     "FloatVectorCandidate",
     "PathCandidate",
-    "TreeCandidate"
+    "TreeCandidate",
+    "DictionaryCandidate"
 ]

@@ -222,19 +222,20 @@ class TreeCandidate(Candidate):
 
 
     def mutate(self) -> TreeCandidate:
-        nodes = [self.root]
+        new_tree = deepcopy(self)
+        nodes = [new_tree.root]
         while len(nodes) != 0:
             node: TreeCandidate.NodeCandidate = nodes.pop()
             r = np.random.rand()
-            if node.depth == self.max_absolute_depth or r < self.stop_early_prob:
-                node.function = self.constant_generator()
+            if node.depth == new_tree.max_absolute_depth or r < new_tree.stop_early_prob:
+                node.function = new_tree.constant_generator()
                 node.children = None
             else:
                 num = 0 if node.children is None else len(node.children)
                 for i in range(num):
                     nodes.append(node.children[i])
 
-        return self
+        return new_tree
 
 
     def recombine(self, c: TreeCandidate) -> TreeCandidate:
@@ -283,3 +284,58 @@ class TreeCandidate(Candidate):
                 nodes.append(node.children[i])
         
         return rec_tree
+
+
+class DictionaryCandidate(Candidate):
+    def __init__(self, names, gens, values, discrete, update_distrib):
+        self.names = names
+        self.gens = gens
+        self.values = values
+        self.discrete = discrete
+        self.update_distrib = update_distrib
+
+    def generate(names, gens, discrete, update_distrib) -> DictionaryCandidate:
+        values = {}
+        for i, name in enumerate(names):
+            if discrete[i]:
+                values[name] = np.random.choice(gens[i])
+            else:
+                values[name] = gens[i]()
+        return DictionaryCandidate(names, gens, values, discrete, update_distrib)
+    
+    def mutate(self) -> DictionaryCandidate:
+        values = {}
+        for i, name in enumerate(self.names):
+                values[name] = self.update_distrib[i](self.values[name])
+        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib)
+    
+    def recombine(self, c: DictionaryCandidate) -> DictionaryCandidate:
+        values = {}
+        for i, name in enumerate(self.names):
+            if self.discrete[i]:
+                if np.random.rand() < 0.5:
+                    values[name] = self.values[name]
+                else:
+                    values[name] = c.values[name]
+            else:
+                alpha = np.random.rand()
+                values[name] = alpha*self.values[name] + (1-alpha)*c.values[name]
+
+        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib)
+
+
+
+
+class NeuralCandidate(Candidate):
+    def __init__(self, layers, net):
+        self.layers = layers
+        self.net = net
+
+    def generate(layers):
+        pass
+
+    def mutate():
+        pass
+
+    def recombine():
+        pass
