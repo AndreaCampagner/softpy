@@ -23,6 +23,7 @@ class FuzzySet(ABC):
         pass
 
 class LambdaFuzzySet(FuzzySet):
+    '''Abstract Class for a fuzzy set defined by an explicitly specified membership function'''
     def __init__(self, func : function):
         self.func = func
 
@@ -186,7 +187,6 @@ class ContinuousFuzzySet(FuzzySet):
         analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
         values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
         '''
-
         try:
             return self.f
         except AttributeError:
@@ -266,7 +266,7 @@ class IntervalFuzzyNumber(FuzzyNumber):
 
 class RampFuzzyNumber(FuzzyNumber):
     '''
-    Implements an ramp fuzzy number
+    Implements a ramp fuzzy number
     '''
     def __init__(self, lower: np.number, upper: np.number):
         if not np.issubdtype(type(lower), np.number):
