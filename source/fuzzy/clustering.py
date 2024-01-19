@@ -5,11 +5,6 @@ from sklearn.base import BaseEstimator, ClusterMixin
 from fuzzy.fuzzyset import DiscreteFuzzySet
 
 class FuzzyCMeans(BaseEstimator,ClusterMixin):
-  '''
-  Implements the fuzzy c-means algorithm. The interface is compatible with the scikit-learn library. It allows to set the number of clusters,
-  a tolerance degree (for avoiding errors in numerical operations), the number of iterations before termination, the clustering metric as well
-  as the fuzzifier degree.
-  '''
   def __init__(self, n_clusters=2, epsilon=0.001, iters=100, random_state=None, metric='euclidean', fuzzifier=2):
     self.n_clusters = n_clusters
     self.epsilon = epsilon
@@ -19,9 +14,6 @@ class FuzzyCMeans(BaseEstimator,ClusterMixin):
     self.fuzzifier = fuzzifier
 
   def fit(self, X, y=None):
-    '''
-    Applies clustering to the given data, by iteratively partially assigning instances to clusters and then recomputing the clusters' centroids.
-    '''
     self.centroids = resample(X, replace=False, n_samples=self.n_clusters, random_state=self.random_state)
     self.cluster_assignments = np.zeros((X.shape[0], self.n_clusters))
     for it in range(self.iters):
@@ -36,9 +28,6 @@ class FuzzyCMeans(BaseEstimator,ClusterMixin):
     return self
 
   def predict(self, X):
-    ''' 
-    For each given instance returns the cluster with maximum membership degree. The fit method must have been called before executing this method.
-    '''
     if not self.fitted:
       raise RuntimeError("Estimator must be fitted")
     dists = pairwise_distances(X, self.centroids, metric=self.metric)
@@ -47,9 +36,6 @@ class FuzzyCMeans(BaseEstimator,ClusterMixin):
     return np.argmax(self.cluster_assignments, axis=1)
   
   def predict_proba(self, X):
-    ''' 
-    For each given instance returns the membership degrees to the computed clusters. The fit method must have been called before executing this method.
-    '''
     if not self.fitted:
       raise RuntimeError("Estimator must be fitted")
     dists = pairwise_distances(X, self.centroids, metric=self.metric)

@@ -4,9 +4,6 @@ from fuzzy.fuzzyset import FuzzySet,  DiscreteFuzzySet, ContinuousFuzzySet
 from collections.abc import Sequence
 
 class FuzzyCombination(FuzzySet):
-    '''
-    Support class to implement a generic combination operator on FuzzySet instances.
-    '''
     def __init__(self, left: FuzzySet, right: FuzzySet, op=None):
         if not isinstance(left, FuzzySet) or not isinstance(right, FuzzySet):
             raise TypeError("All arguments should be fuzzy sets")
@@ -68,7 +65,7 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
 
     def __call__(self, arg):
         '''
-        Computes the membership degree of arg by evaluating the OWA with the given weights
+        Simply computes the membership degree of arg by evaluating the OWA with the given weights
         '''
         if isinstance(arg, tuple):
             ms = np.sort([self.fuzzysets[i](arg[i]) for i in range(len(self.fuzzysets))])
@@ -84,9 +81,9 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
 class DiscreteFuzzyOWA(DiscreteFuzzySet):
     '''
     Support class to implement the OWA operation between DiscreteFuzzySet instances.
-    The OWA operator is actually implemented in the constructor, that builds a new DiscreteFuzzySet
+    The OWA operator is actually implemented in the constructor, that build a new DiscreteFuzzySet
     by computing the appropriate values of the membership degrees. All other methods directly rely on
-    the base implementation of DiscreteFuzzySet.
+    the base implementation of DiscreteFuzzySet
     Notice: the result of OWA on DiscreteFuzzySet instances is a DiscreteFuzzySet
     '''
 

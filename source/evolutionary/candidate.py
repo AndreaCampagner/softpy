@@ -322,3 +322,20 @@ class DictionaryCandidate(Candidate):
                 values[name] = alpha*self.values[name] + (1-alpha)*c.values[name]
 
         return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib)
+
+
+
+
+class NeuralCandidate(Candidate):
+    def __init__(self, layers, net):
+        self.layers = layers
+        self.net = net
+
+    def generate(layers):
+        pass
+
+    def mutate():
+        pass
+
+    def recombine():
+        pass

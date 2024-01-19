@@ -3,14 +3,7 @@ import numpy as np
 from evolutionary.singlestate import MetaHeuristicsAlgorithm
 
 class GeneticAlgorithm(MetaHeuristicsAlgorithm):
-    '''
-    A generic implementation of an evolutionary algorithm. It supports different individual candidates' representation formats and can thus be used to
-    implement the traditional genetic algorithm as well as variants such as genetic programming. It requires specification of the selection and fitness
-    function, of the population size as well as whether the algorithm should apply elitism (and with how many elite individuals) or not.
-    The **kwargs argument is used to provide additional arguments for individual candidates' initialization.
-    Note that the algorithm is designed to solve a maximization problem: if a minimization problem is to be solved instead, this must be taken care of in the
-    fitness function.
-    '''
+
     def __init__(self, pop_size: int, candidate_type, selection_func, fitness_func, elitism=False, n_elite=1, **kwargs):
         self.pop_size = pop_size
         self.selection_func = selection_func
@@ -21,12 +14,6 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.n_elite = n_elite
 
     def fit(self, n_iters=10, keep_history=False, show_iters=False):
-        '''
-        Applies the genetic algorithm for a given number of iterations. Notice that the implemented recombination is non-standard as it is called two
-        times rather than only once. The algorithm allows for global state tracking in the selection function (as in stochastic universal selection) by
-        using an explictly defined state tracking variable (current_step). The individual candidates are randomly permuted at each iteration to avoid
-        ordering bias. The population is entirely replaced at each iteration (unless elitism is used).
-        '''
         if self.elitism and (self.pop_size + self.n_elite)%2 != 0:
             self.pop_size += 1
 
@@ -78,14 +65,6 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
     
 
 class SteadyStateGeneticAlgorithm(MetaHeuristicsAlgorithm):
-    '''
-    A generic implementation of a steady-state evolutionary algorithm. It supports different individual candidates' representation formats and can thus be used to
-    implement the traditional genetic algorithm as well as variants such as genetic programming. It requires specification of the selection and fitness
-    function, as well as of the population size.
-    The **kwargs argument is used to provide additional arguments for individual candidates' initialization.
-    Note that the algorithm is designed to solve a maximization problem: if a minimization problem is to be solved instead, this must be taken care of in the
-    fitness function.
-    '''
     def __init__(self, pop_size: int, candidate_type, selection_func, fitness_func, **kwargs):
         self.pop_size = pop_size
         self.selection_func = selection_func
@@ -94,12 +73,6 @@ class SteadyStateGeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.kwargs = kwargs
 
     def fit(self, n_iters=10, keep_history=False):
-        '''
-        Applies the genetic algorithm for a given number of iterations. Notice that the implemented recombination is non-standard as it is called two
-        times rather than only once. The algorithm allows for global state tracking in the selection function (as in stochastic universal selection) by
-        using an explictly defined state tracking variable (current_step). At each iteration, two individual candidate at random are selected for being replaced by
-        the generated children individual candidates.
-        '''
         self.population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
         self.fitness = np.zeros(self.population.shape)
         self.best = None
