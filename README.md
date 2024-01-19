@@ -22,4 +22,4 @@ solving selected tasks and problems in an interactive and collaborative manner (
 * 22/05/2023 - Evolutionary computing for combinatorial optimization (hamiltonian path), intro to exploration-exploitation trade-off (example_lesson4.ipynb, example_lesson5.ipynb) (3h)
 * 29/05/2023 - Exploration-exploitation trade-off (example_lesson5.ipynb) (2h)
 * 12/06/2023 - Genetic programming and tree-based representations (example_lesson6.ipynb) (3h)
-* 15/06/2023 - Evolutionary copmuting for Machine Learning (hyper-parameter optimization), hints to neural-architecture search (2h)
+* 15/06/2023 - Evolutionary computing for Machine Learning (hyper-parameter optimization), hints to neural-architecture search (2h)
