@@ -9,13 +9,23 @@ import scipy as sp
 
 
 class FuzzyRule(ABC):
+    '''
+    An abstract class to represent a fuzzy rule.
+    '''
     @abstractmethod
     def evaluate(self, params : dict):
         pass
 
 
 class MamdaniRule(FuzzyRule):
-
+    '''
+    An implementation of a fuzzy rule for a Mamdani-type control system.
+    The premise of the rule is a dictionary of FuzzySet instances, interpreted as a conjuction obtained using the specified tnorm operation.
+    The tnorm itself is a function that constructs a FuzzyCombination object.
+    The consequent is a FuzzySet instance.
+    The contructor builds the rule as a new FuzzySet (specifically, a FuzzyCombination) by iteratively combining the FuzzySets in the premise
+    and then with the consequent.
+    '''
     def __init__(self, premise : dict[str, FuzzySet], consequent_name: str, consequent: FuzzySet,
                  tnorm):
         
@@ -50,7 +60,12 @@ class MamdaniRule(FuzzyRule):
         self.rule = self.tnorm(self.antecedent, self.consequent)      
         
 
-    def evaluate(self, params : dict): 
+    def evaluate(self, params : dict):
+        '''
+        It evaluates the MamdaniRule at a certain set of values, by computing the corresponding membership degrees: in particular, the evaluate
+        method accepts a specification of values for the FuzzySets in the premise and return a LambdaFuzzySet that evaluates the rule at any given
+        value of the consequent.
+        '''
         if not isinstance(params, dict):
             raise TypeError("params should be a dict or number")
         
@@ -72,6 +87,13 @@ class MamdaniRule(FuzzyRule):
     
 
 class SugenoRule(FuzzyRule):
+    '''
+    An implementation of a fuzzy rule for a Mamdani-type control system.
+    The premise of the rule is a dictionary of FuzzySet instances, interpreted as a conjuction obtained using the specified tnorm operation.
+    The tnorm itself is a function that constructs a FuzzyCombination object.
+    The consequent is a function (should be linear in the premise components).
+    The contructor builds the rule as a new FuzzySet (specifically, a FuzzyCombination) by iteratively combining the FuzzySets in the premise.
+    '''
     def __init__(self, premise : dict[str, FuzzySet], consequent_name: str, consequent,
                  tnorm):
         
@@ -102,7 +124,12 @@ class SugenoRule(FuzzyRule):
             self.antecedent = curr     
         
 
-    def evaluate(self, params : dict): 
+    def evaluate(self, params : dict):
+        '''
+        It evaluates the SugenoRule at a certain set of values, by computing the value: in particular, the evaluate
+        method accepts a specification of values for the FuzzySets in the premise and returns the evaluation of the consequent function
+        at these values.
+        '''
         if not isinstance(params, dict):
             raise TypeError("params should be a dict or number")
         
@@ -124,7 +151,10 @@ class SugenoRule(FuzzyRule):
     
 
 class FuzzyControlSystem:
-
+    '''
+    An implementation of a FuzzyControlSystem: it can be either a Mamdani control system or a Sugeno control system, by specifying the appropriate type of
+    rule. It is defined by a given set of rules (of the appropriate type) as well as (in the case of a Mamdani control system) by a tconorm operator.
+    '''
     def __init__(self, rules: Sequence[FuzzyRule], tconorm = None, type=MamdaniRule):
 
         if type not in [MamdaniRule, SugenoRule]:
@@ -140,6 +170,11 @@ class FuzzyControlSystem:
 
 
     def evaluate_mamdani(self, results: dict, sets : dict):
+        '''
+        Applies the control for a Mamdani control system at the given input control, given the specified control results and the corresponding fuzzy sets.
+        Specifically, it first combines the different controls for the same output using the specified tconorm operator, then applies defuzzification to
+        reduce to a single control output.
+        '''
         output = {}
         for n in results.keys():
             curr = results[n][0]
@@ -161,6 +196,10 @@ class FuzzyControlSystem:
         return output
     
     def evaluate_sugeno(self, results: dict):
+        '''
+        Applies the control for a Sugeno control system at the given input control, given the specified control results and fuzzy set memberships.
+        Specifically, it combines the different controls for a given output by performing weighted average.
+        '''
         output = {}
         for n in results.keys():
             num = 0
@@ -175,6 +214,11 @@ class FuzzyControlSystem:
 
 
     def evaluate(self, params : dict, u = None) -> dict:
+        '''
+        It applies the control system at the given control input by applying all the rules and then returning an output signal.
+        After applying all the rules in the control system rule base, it applies a different evaluation method based on whether
+        it is a Mamdani or a Sugeno control system.
+        '''
         results = {}
         sets = {}
         for r in self.rules:
