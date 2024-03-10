@@ -19,7 +19,7 @@ __all__ = [
     "TriangularFuzzyNumber",
     "TrapezoidalFuzzyNumber",
     "minimum",
-    "maximum"
+    "maximum",
     "lukasiewicz",
     "boundedsum",
     "probsum",

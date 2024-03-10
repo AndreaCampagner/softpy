@@ -2,7 +2,7 @@ from sklearn.metrics import pairwise_distances
 import numpy as np
 from sklearn.utils import resample
 from sklearn.base import BaseEstimator, ClusterMixin
-from fuzzy.fuzzyset import DiscreteFuzzySet
+from softpy.fuzzy.fuzzyset import DiscreteFuzzySet
 
 class FuzzyCMeans(BaseEstimator,ClusterMixin):
   '''

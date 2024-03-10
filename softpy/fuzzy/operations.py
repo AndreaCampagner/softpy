@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from fuzzy.fuzzyset import FuzzySet,  DiscreteFuzzySet, ContinuousFuzzySet
+from softpy.fuzzy.fuzzyset import FuzzySet,  DiscreteFuzzySet, ContinuousFuzzySet
 from collections.abc import Sequence
 
 class FuzzyCombination(FuzzySet):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from evolutionary.singlestate import MetaHeuristicsAlgorithm
+from softpy.evolutionary.singlestate import MetaHeuristicsAlgorithm
 
 class GeneticAlgorithm(MetaHeuristicsAlgorithm):
     '''
