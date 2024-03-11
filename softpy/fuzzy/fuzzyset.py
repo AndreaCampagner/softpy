@@ -374,7 +374,7 @@ class TriangularFuzzyNumber(FuzzyNumber):
             raise ValueError("Alpha should be in [0,1], is %s" % alpha)
         
         low = alpha*(self.middle - self.lower) + self.lower
-        upp = alpha*(self.upper - self.middle) + self.middle
+        upp = self.upper - alpha*(self.upper - self.middle)
         
         return low, upp
     
