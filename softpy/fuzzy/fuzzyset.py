@@ -470,3 +470,57 @@ class TrapezoidalFuzzyNumber(FuzzyNumber):
             self.f : np.number = sp.integrate.quad(left_int, self.lower, self.middle1)[0]
             self.f += sp.integrate.quad(right_int, self.middle2, self.upper)[0]
             return self.f
+        
+
+
+
+class GaussianFuzzyNumber(FuzzyNumber):
+    '''
+    Implements a Gaussian fuzzy number
+    '''
+    def __init__(self, mean: np.number, std: np.number):
+        if not np.issubdtype(type(mean), np.number):
+            raise TypeError("Mean should be float, is %s" % type(mean))
+        
+        if not np.issubdtype(type(std), np.number):
+            raise TypeError("Middle should be floats, is %s" % type(std))
+        
+        if std < 0:
+            raise ValueError("std should be positive")
+        
+        self.mean = mean
+        self.std = std
+
+        self.min = self.mean - np.sqrt(2*self.std**2 * np.log(1/0.001))
+        self.max = self.mean + np.sqrt(2*self.std**2 * np.log(1/0.001))
+
+    def __call__(self, arg: np.number) -> np.number:
+        if not np.issubdtype(type(arg), np.number):
+            raise TypeError("Arg should be float, is %s" % type(arg))
+        
+        return np.exp(-(arg - self.mean)**2/(2*self.std**2))
+        
+    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
+        if not np.issubdtype(type(alpha), np.number):
+            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
+        
+        if alpha < 0 or alpha > 1:
+            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
+        
+        low = self.mean - np.sqrt(2*self.std**2 * np.log(1/alpha))
+        upp = self.mean + np.sqrt(2*self.std**2 * np.log(1/alpha))
+        
+        return low, upp
+    
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, GaussianFuzzyNumber):
+            return NotImplemented
+        return self.mean == other.mean and self.std == other.std
+    
+    def fuzziness(self) -> np.number:
+        try:
+            return self.f
+        except AttributeError:
+            intgr = lambda x: self(x)*np.log(1/self(x)) + (1 - self(x))*np.log2(1/(1-self(x)))
+            self.f : np.number = sp.integrate.quad(intgr, self.min, self.max)[0]
+            return self.f
