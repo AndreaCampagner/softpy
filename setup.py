@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
    name='softpy',
-   version='0.0.2',
+   version='0.0.4',
    author='Andrea Campagner',
    python_requires=">3.8.0",
    author_email='onyris93@gmail.com',

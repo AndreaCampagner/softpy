@@ -30,7 +30,7 @@ class RandomSearch(MetaHeuristicsAlgorithm):
             self.fitness_h[:] = np.NINF
 
 
-        for it in n_iters:
+        for it in range(n_iters):
             population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
             fitness = np.vectorize(self.fitness_func)(population)
             v = np.max(fitness)
