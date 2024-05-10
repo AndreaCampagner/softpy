@@ -6,5 +6,7 @@ at the 2nd year of the Bachelor of Science in Artificial Intelligence at Univers
 
 The aim of the library is to provide a practical implementation of the main ideas in soft computing, specifically fuzzy systems and evolutionary computing.
 
+THe library is released as open-source and available on [GitHub](https://github.com/AndreaCampagner/softpy) and [pypi](https://pypi.org/project/softpy/).
+
 **Main Developer**: Andrea Campagner (PhD)
 **Affiliation**: Post-Doc Researcher at IRCCS Istituto Ortopedico Galeazzi, Milan, Italy
