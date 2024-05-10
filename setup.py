@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
    name='softpy',
-   version='0.0.4',
+   version='0.0.5',
    author='Andrea Campagner',
    python_requires=">3.8.0",
    author_email='onyris93@gmail.com',
    packages=find_packages(include=['softpy', 'softpy.*']),
-   url='https://pypi.org/project/scikit-weak/',
+   url='https://pypi.org/project/softpy/',
    license='LICENSE.txt',
    description='A package for soft computing in Python.',
    long_description=open('README.md').read(),
