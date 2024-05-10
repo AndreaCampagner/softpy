@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from softpy.fuzzy.fuzzyset import FuzzySet, LambdaFuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
+from .fuzzyset import FuzzySet, LambdaFuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import partial

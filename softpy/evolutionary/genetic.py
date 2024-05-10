@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from softpy.evolutionary.singlestate import MetaHeuristicsAlgorithm
+from .singlestate import MetaHeuristicsAlgorithm
 
 class GeneticAlgorithm(MetaHeuristicsAlgorithm):
     '''
@@ -36,11 +36,11 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.fitness_best = np.NINF
 
         if keep_history:
-            self.best_h = np.empty(n_iters+1, dtype=self.candidate_type)
-            self.fitness_h = np.zeros(n_iters+1)
+            self.best_h = np.empty(n_iters, dtype=self.candidate_type)
+            self.fitness_h = np.zeros(n_iters)
             self.fitness_h[:] = np.NINF
 
-        for it in range(n_iters+1):
+        for it in range(n_iters):
             if show_iters:
                 print(it)
             self.fitness = np.vectorize(self.fitness_func)(self.population)
