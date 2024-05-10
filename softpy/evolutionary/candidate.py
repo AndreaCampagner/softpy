@@ -174,21 +174,23 @@ class TreeCandidate(Candidate):
             self.parent = parent
             self.child_id = child_id
 
-    def __init__(self, root: TreeCandidate.NodeCandidate, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob):
+    def __init__(self, root: TreeCandidate.NodeCandidate, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob, mutate_prob):
         self.root = root
         self.function_set = function_set
         self.arities = arities
         self.max_absolute_depth = max_absolute_depth
         self.constant_generator = constant_generator
         self.stop_early_prob = stop_early_prob
+        self.mutate_prob = mutate_prob
 
-    def generate(function_set, arities, max_depth, max_absolute_depth, constant_generator, stop_early_prob = 0.0) -> TreeCandidate:
+    def generate(function_set, arities, max_depth, max_absolute_depth, constant_generator, stop_early_prob = 0.0, mutate_prob=0.2) -> TreeCandidate:
         depth = 1
         parent = None
 
         nodes = []
 
-        if depth >= max_depth:
+        r = np.random.rand()
+        if (depth >= max_depth)  or (r < stop_early_prob):
             val = constant_generator()
             nodes.append(TreeCandidate.NodeCandidate(val, None, depth, parent, None))
         else:
@@ -218,7 +220,7 @@ class TreeCandidate(Candidate):
 
                 node.children[i] = child
 
-        return TreeCandidate(root, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob)
+        return TreeCandidate(root, function_set, arities, max_absolute_depth, constant_generator, stop_early_prob, mutate_prob)
 
 
     def mutate(self) -> TreeCandidate:
@@ -231,10 +233,35 @@ class TreeCandidate(Candidate):
                 node.function = new_tree.constant_generator()
                 node.children = None
             else:
-                num = 0 if node.children is None else len(node.children)
-                for i in range(num):
-                    nodes.append(node.children[i])
+                r = np.random.rand()
+                if r < new_tree.mutate_prob:
+                    idx = np.random.choice(range(len(new_tree.function_set)))
+                    node.function = new_tree.function_set[idx]
+                    ari = new_tree.arities[idx]
+                    node.children = np.empty(ari, dtype=TreeCandidate.NodeCandidate)
+                    curr_nodes = [node]
 
+                    while len(curr_nodes) != 0:
+                        curr_node: TreeCandidate.NodeCandidate = curr_nodes.pop()
+                        num = 0 if curr_node.children is None else len(curr_node.children)
+                        curr_depth = curr_node.depth
+                        for i in range(num):
+                            r = np.random.rand()
+                            if (curr_depth + 1 == new_tree.max_absolute_depth) or (r < new_tree.stop_early_prob):
+                                val = new_tree.constant_generator()
+                                child = TreeCandidate.NodeCandidate(val, None, curr_depth+1, curr_node, i)
+                            elif curr_depth + 1 < new_tree.max_absolute_depth:
+                                idx = np.random.choice(range(len(new_tree.function_set)))
+                                fun = new_tree.function_set[idx]
+                                ari = new_tree.arities[idx]
+                                child = TreeCandidate.NodeCandidate(fun, np.empty(ari, dtype=TreeCandidate.NodeCandidate), curr_depth+1, curr_node, i)
+                                curr_nodes.append(child)
+
+                            curr_node.children[i] = child
+                else:
+                    num = 0 if node.children is None else len(node.children)
+                    for i in range(num):
+                        nodes.append(node.children[i])
         return new_tree
 
 
@@ -271,6 +298,9 @@ class TreeCandidate(Candidate):
 
         if parent_old is not None:
             parent_old.children[idx] = new
+        else:
+            rec_tree.root = new
+
         new.parent = parent_old
         new.child_id = idx
         new.depth = depth
