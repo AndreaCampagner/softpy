@@ -3,3 +3,4 @@ examples/*.ipynb_checkpoints
 slides/*
 softpy.egg-info/*
 dist/*
+.venv/
