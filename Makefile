@@ -1,15 +1,8 @@
-VENV := .venv/bin/activate
 NMODULE := softpy
+PTESTS := tests
 
-venv:
-	. $(VENV) 
-	pip install -r requirements.txt
-
-# run:
-# 	./actions.sh run
-
-# test:
-# 	./actions.sh test
-
-verify: venv
+verify:
 	pylint $(NMODULE)
+
+tests:
+	pytest -q $(PTESTS)

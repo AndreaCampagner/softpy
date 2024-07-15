@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Callable
 import numpy as np
 import scipy as sp
 
@@ -154,51 +155,156 @@ class DiscreteFuzzySet(FuzzySet):
 
 class ContinuousFuzzySet(FuzzySet):
     '''
-    Abstract class for a continuous fuzzy set
-    Note: each (bounded) continuous fuzzy set has a minimum and maximum elements s.t. their membership degrees are > 0
-    Epsilon is used to define an approximation degree for various operations that cannot be implemented exactly 
-    '''
-    min : np.number
-    max : np.number
-    epsilon = 0.01
+    Class for a generic unbounded continuous fuzzy set. If memberships function 
+    is exceed interval [0,1], every exceeded memberships will be truncated at 0 or 1.
 
-    def __getitem__(self, alpha: np.number) -> np.ndarray | tuple:
-        '''
-        In general, it is not possible to take alpha cuts of continuous fuzzy sets analytically: we need to search
-        explicitly for all values whose membership degree is >= alpha. Since it is impossible to look all real numbers,
-        we do a grid search where the grid step-size is defined by epsilon
-        '''
+    Membership function must be defined in all R set.
+
+    You can express a buond used to compute operation like fuzzyness, alpha cut and 
+    HArtley function
+    '''
+
+    def __init__(self, 
+                 memberships_function: Callable[[np.number], np.number], 
+                 epsilon: np.number = 1e-3,
+                 bound: tuple[np.number, np.number] = None) -> None:
+        
+        self.__epsilon: np.number = 1e-3
+        self.__memberships_function: Callable[[np.number], np.number]
+        self.__bound: tuple[np.number, np.number] = None
+        self._f: np.number = -1
+        self._h: np.number = -1
+        
+        if not isinstance(memberships_function, Callable):
+            raise TypeError("Memberships function should be a lambda that takes" + 
+                            "as input a real number and returns a value in [0,1]")
+        
+        if bound != None and not isinstance(bound, tuple):
+            raise TypeError("buond should be a tuple")
+        
+        if bound != None and (bound[0] > bound[1]):
+            raise ValueError("buond[0] should be less equal than buond[1]")
+
+        if epsilon >= 1:
+            raise ValueError("Epsilon should be small number, ex: 1e-3")
+
+        self.__memberships_function = memberships_function
+        self.__epsilon = epsilon
+        self.__bound = bound
+        if bound != None:
+            self.fuzziness()
+            self.hartley()
+
+    
+    def memberships_function(self, x: np.number) -> np.number:
+        member = self.__memberships_function(x)
+
+        if member <= 0:
+            return 0
+        elif member >= 1:
+            return 1
+        return member
+
+    @property
+    def epsilon(self) -> np.number:
+        return self.__epsilon
+    
+    @property
+    def bound(self) -> tuple:
+        return self.__bound
+    
+    @bound.setter
+    def bound(self, bound: tuple[np.number, np.number]) -> None:
+        
+        if not isinstance(bound, tuple):
+            raise TypeError("buond should be a tuple")
+        
+        if bound[0] > bound[1]:
+            raise ValueError("buond[0] should be less equal than buond[1]")
+        
+        self.__bound = bound
+
+    def __call__(self, arg: np.number) -> np.number:
+        if not np.issubdtype(type(arg), np.number):
+            raise TypeError("Arg should be a number")
+
+        return self.memberships_function(arg)
+
+    def __getitem__(self, alpha) -> np.ndarray:
+        if self.bound == None:
+            raise AttributeError("You should define the interval on which you want compute alpha cut")
 
         if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
-        
+            raise TypeError(f"Alpha should be a float in [0,1], is {type(alpha)}")
+
         if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
+            raise ValueError(f"Alpha should be a float in [0,1], is {type(alpha)}")
+
+        step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
+
+        x_values = np.linspace(self.bound[0], 
+                               self.bound[1], 
+                               step)
         
-        
-        
-        grid = np.linspace(self.min, self.max, int((self.max - self.min)/self.epsilon))
-        vals = np.array([v if self(v) >= alpha else np.nan for v in grid])
-        return vals
-    
+        discr_memb_func = np.array([self(x) for x in  x_values])
+
+        alpha_cut = np.array([v if v >= alpha else np.nan for v in discr_memb_func])
+
+        return alpha_cut
+
     def fuzziness(self) -> np.number:
         '''
         As in the case of alpha cuts, it is generally impossible to compute the fuzziness of a continuous fuzzy set
         analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
         values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
         '''
-        try:
-            return self.f
-        except AttributeError:
-            func_int = lambda x: 0 if (np.abs(x - 0) <= self.epsilon or np.abs(x - 1) <= self.epsilon) else self(x)*np.log(1/self(x)) + (1 - self(x))*np.log2(1/(1-self(x)))
-            self.f : np.number = sp.integrate.quad(func_int, self.min, self.max, epsabs=self.epsilon)[0]
-            return self.f
+        if self.bound == None:
+            raise AttributeError("You should define the interval on which you want compute alpha cut")
+        if self._f == -1:
+            self._f = sp.integrate.quad(lambda x: 1 - np.abs(2 * self(x) - 1), 
+                                       self.bound[0], 
+                                       self.bound[1], 
+                                       epsabs=self.epsilon)[0]
+        return self._f
+        
+    def hartley(self) -> np.number:
+        '''
+        As in the case of alpha cuts, it is generally impossible to compute the fuzziness of a continuous fuzzy set
+        analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
+        values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
+        '''
+        if self.bound == None:
+            raise AttributeError("You should define the interval on which you want compute alpha cut")        
+
+        if self._h == -1:
+            
+            step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
+            
+            x_values = np.linspace(self.bound[0], 
+                                self.bound[1], 
+                                step)
+            
+            discr_memb_func = np.array([self(x) for x in  x_values])
+
+            height = np.max(discr_memb_func)
+
+            self._h = sp.integrate.quad(lambda alpha: np.log2(np.count_nonzero(np.isnan(self[alpha]))), 
+                                         0, 
+                                         height, 
+                                         epsabs=self.epsilon)[0]
+        
+        return self._h
 
 
-class FuzzyNumber(ContinuousFuzzySet):
+class BuondedContinuousFuzzySet(ContinuousFuzzySet):
     '''
     Abstract class for a fuzzy number (convex, closed fuzzy set over the real numbers)
     '''
+    def __init__(self, 
+                 memberships_function: Callable[[np.number], np.number], 
+                 bound: tuple[np.number, np.number],
+                 epsilon: np.number = 1e-3):
+        super.__init__(lambda x: memberships_function, epsilon, bound)
 
     def hartley(self) -> np.number:
         '''
@@ -206,14 +312,29 @@ class FuzzyNumber(ContinuousFuzzySet):
         alpha cut is an interval. Thus, for each alpha, we simply compute the (logarithm of the) length
         of the corresponding interval and then integrate over alpha
         '''
-        try:
-            return self.h
-        except AttributeError:
-            func_int = lambda x: np.log2(self[x][1] - self[x][0])
-            self.h : np.number = sp.integrate.quad(func_int, 0, 1)[0]
-            return self.h 
+        if self.bound == None:
+            raise AttributeError("You should define the interval on which you want compute alpha cut")        
 
+        if self._h == -1:
+            
+            step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
+            
+            x_values = np.linspace(self.bound[0], 
+                                self.bound[1], 
+                                step)
+            
+            discr_memb_func = np.array([self(x) for x in  x_values])
 
+            height = np.max(discr_memb_func)
+
+            self._h = sp.integrate.quad(lambda alpha: np.log2(np.count_nonzero(np.isnan(self[alpha]))), 
+                                         0, 
+                                         height, 
+                                         epsabs=self.epsilon)[0]
+        
+        return self._h
+
+"""
 class IntervalFuzzyNumber(FuzzyNumber):
     '''
     Implements an interval fuzzy number (equivalently, an interval)
@@ -524,3 +645,4 @@ class GaussianFuzzyNumber(FuzzyNumber):
             intgr = lambda x: self(x)*np.log(1/self(x)) + (1 - self(x))*np.log2(1/(1-self(x)))
             self.f : np.number = sp.integrate.quad(intgr, self.min, self.max)[0]
             return self.f
+            """
