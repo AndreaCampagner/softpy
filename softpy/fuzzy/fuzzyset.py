@@ -1,8 +1,10 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import Callable
 import numpy as np
 import scipy as sp
+import softpy.fuzzy.memberships_function as mf
 
 
 class FuzzySet(ABC):
@@ -160,18 +162,17 @@ class ContinuousFuzzySet(FuzzySet):
 
     Membership function must be defined in all R set.
 
-    You can express a buond used to compute operation like fuzzyness, alpha cut and 
-    HArtley function
+    Bound is the interval that express the support set.
     '''
 
     def __init__(self, 
                  memberships_function: Callable[[np.number], np.number], 
-                 epsilon: np.number = 1e-3,
-                 bound: tuple[np.number, np.number] = None) -> None:
+                 bound: tuple[np.number, np.number],
+                 epsilon: np.number = 1e-3) -> None:
         
         self.__epsilon: np.number = 1e-3
         self.__memberships_function: Callable[[np.number], np.number]
-        self.__bound: tuple[np.number, np.number] = None
+        self.__bound: tuple[np.number, np.number]
         self._f: np.number = -1
         self._h: np.number = -1
         
@@ -179,11 +180,14 @@ class ContinuousFuzzySet(FuzzySet):
             raise TypeError("Memberships function should be a lambda that takes" + 
                             "as input a real number and returns a value in [0,1]")
         
-        if bound != None and not isinstance(bound, tuple):
+        if not isinstance(bound, tuple):
             raise TypeError("buond should be a tuple")
         
-        if bound != None and (bound[0] > bound[1]):
+        if bound[0] > bound[1]:
             raise ValueError("buond[0] should be less equal than buond[1]")
+
+        if not isinstance(epsilon, np.number):
+            raise TypeError("epsilon should be a number")
 
         if epsilon >= 1:
             raise ValueError("Epsilon should be small number, ex: 1e-3")
@@ -191,19 +195,22 @@ class ContinuousFuzzySet(FuzzySet):
         self.__memberships_function = memberships_function
         self.__epsilon = epsilon
         self.__bound = bound
-        if bound != None:
-            self.fuzziness()
-            self.hartley()
+
+        self.fuzziness()
+        self.hartley()
 
     
     def memberships_function(self, x: np.number) -> np.number:
         member = self.__memberships_function(x)
-
-        if member <= 0:
-            return 0
-        elif member >= 1:
-            return 1
-        return member
+        
+        if self.bound[0] <= x <= self.bound[1]:
+            if member <= 0:
+                return 0
+            elif member >= 1:
+                return 1
+            return member
+        
+        return 0
 
     @property
     def epsilon(self) -> np.number:
@@ -212,17 +219,6 @@ class ContinuousFuzzySet(FuzzySet):
     @property
     def bound(self) -> tuple:
         return self.__bound
-    
-    @bound.setter
-    def bound(self, bound: tuple[np.number, np.number]) -> None:
-        
-        if not isinstance(bound, tuple):
-            raise TypeError("buond should be a tuple")
-        
-        if bound[0] > bound[1]:
-            raise ValueError("buond[0] should be less equal than buond[1]")
-        
-        self.__bound = bound
 
     def __call__(self, arg: np.number) -> np.number:
         if not np.issubdtype(type(arg), np.number):
@@ -237,7 +233,7 @@ class ContinuousFuzzySet(FuzzySet):
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError(f"Alpha should be a float in [0,1], is {type(alpha)}")
 
-        if alpha < 0 or alpha > 1:
+        if alpha <= 0 or alpha >= 1:
             raise ValueError(f"Alpha should be a float in [0,1], is {type(alpha)}")
 
         step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
@@ -294,355 +290,381 @@ class ContinuousFuzzySet(FuzzySet):
                                          epsabs=self.epsilon)[0]
         
         return self._h
-
-
-class BuondedContinuousFuzzySet(ContinuousFuzzySet):
-    '''
-    Abstract class for a fuzzy number (convex, closed fuzzy set over the real numbers)
-    '''
+    
+class TriangularFuzzySet(ContinuousFuzzySet):
     def __init__(self, 
-                 memberships_function: Callable[[np.number], np.number], 
-                 bound: tuple[np.number, np.number],
-                 epsilon: np.number = 1e-3):
-        super.__init__(lambda x: memberships_function, epsilon, bound)
+                 left: np.number,
+                 spike: np.number,
+                 right: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(left), np.number):
+            raise TypeError("a should be a number")
+        
+        if not np.issubdtype(type(spike), np.number):
+            raise TypeError("b should be a number")
+        
+        if not np.issubdtype(type(right), np.number):
+            raise TypeError("c should be a number")
 
-    def hartley(self) -> np.number:
-        '''
-        In the case of fuzzy numbers it is easy to compute the hartley entropy, because we know that each
-        alpha cut is an interval. Thus, for each alpha, we simply compute the (logarithm of the) length
-        of the corresponding interval and then integrate over alpha
-        '''
-        if self.bound == None:
-            raise AttributeError("You should define the interval on which you want compute alpha cut")        
+        if not (left <= spike <= right):
+            raise ValueError("Parameters a, b and c should be a <= b <= c")
 
-        if self._h == -1:
-            
-            step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
-            
-            x_values = np.linspace(self.bound[0], 
-                                self.bound[1], 
-                                step)
-            
-            discr_memb_func = np.array([self(x) for x in  x_values])
+        super().__init__(partial(mf.triangular, a = left, b = spike, c = right), 
+                         epsilon, 
+                         bound=(left, right))
 
-            height = np.max(discr_memb_func)
+        self.__left = left
+        self.__spike = spike
+        self.__right = right
 
-            self._h = sp.integrate.quad(lambda alpha: np.log2(np.count_nonzero(np.isnan(self[alpha]))), 
-                                         0, 
-                                         height, 
-                                         epsabs=self.epsilon)[0]
-        
-        return self._h
+class TrapezoidalFuzzySet(ContinuousFuzzySet):
 
-"""
-class IntervalFuzzyNumber(FuzzyNumber):
-    '''
-    Implements an interval fuzzy number (equivalently, an interval)
-    '''
-    def __init__(self, lower: np.number, upper: np.number):
-        if not np.issubdtype(type(lower), np.number):
-            raise TypeError("Lower should be float, is %s" % type(lower))
+    def __init__(self, 
+                 left_lower: np.number,
+                 left_upper: np.number,
+                 right_upper: np.number,
+                 right_lower: np.number,
+                 epsilon: np.number = 0.001) -> None:
         
-        if not np.issubdtype(type(upper), np.number):
-            raise TypeError("Upper should be float, is %s" % type(upper))
+        if not np.issubdtype(type(left_lower), np.number):
+            raise TypeError("left_lower should be a number")
         
-        if lower > upper:
-            raise ValueError("Lower should be smaller than Upper")
+        if not np.issubdtype(type(left_upper), np.number):
+            raise TypeError("left_upper should be a number")
         
-        self.lower = lower
-        self.upper = upper
-        self.min = lower
-        self.max = upper
+        if not np.issubdtype(type(right_upper), np.number):
+            raise TypeError("right_upper should be a number")
+        
+        if not np.issubdtype(type(right_lower), np.number):
+            raise TypeError("right_lower should be a number")
+        
+        if not (left_lower <= left_upper <= right_upper <= right_lower):
+            raise ValueError("Parameters left_lower, left_upper, right_upper and right_lower should be left_lower" +
+                             "<= left_upper <= right_upper <= right_lower")
 
-    def __call__(self, arg: np.number) -> np.number:
-        if not np.issubdtype(type(arg), np.number):
-            raise TypeError("Arg should be float, is %s" % type(arg))
-        
-        if arg < self.lower or arg > self.upper:
-            return 0.0
-        else:
-            return 1.0
-        
-    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
-        if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
-        
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
-        
-        return self.lower, self.upper
-    
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, IntervalFuzzyNumber):
-            return NotImplemented
-        return self.lower == other.lower and self.upper == other.upper
-    
-    def fuzziness(self) -> np.number:
-        return 0.0
-    
-    def hartley(self) -> np.number:
-        return np.log2(self.upper - self.lower)
-    
+        super().__init__(partial(mf.trapezoidal, 
+                                 a = left_lower, 
+                                 b = left_upper, 
+                                 c = right_upper, 
+                                 d = right_lower), epsilon, bound=(left_lower, right_lower))
 
+        self.__left_lower = left_lower
+        self.__left_upper = left_upper
+        self.__right_upper = right_upper
+        self.__right_lower = right_lower
+        
+class LinearZFuzzySet(ContinuousFuzzySet):
 
-class RampFuzzyNumber(FuzzyNumber):
-    '''
-    Implements a ramp fuzzy number
-    '''
-    def __init__(self, lower: np.number, upper: np.number):
-        if not np.issubdtype(type(lower), np.number):
-            raise TypeError("Lower should be float, is %s" % type(lower))
+    def __init__(self, 
+                 left_upper: np.number,
+                 right_lower: np.number,
+                 epsilon: np.number = 0.001) -> None:
         
-        if not np.issubdtype(type(upper), np.number):
-            raise TypeError("Upper should be float, is %s" % type(upper))
+        if not np.issubdtype(type(left_upper), np.number):
+            raise TypeError("left_upper should be a number")
         
-        self.lower = lower
-        self.upper = upper
-        self.min = np.min([lower,upper])
-        self.max = np.max([lower,upper])
+        if not np.issubdtype(type(right_lower), np.number):
+            raise TypeError("right_lower should be a number")
+        
+        if not (left_upper <= right_lower):
+            raise ValueError("Parameters left_upper and right_lower should be left_upper <= right_lower")
 
-    def __call__(self, arg: np.number) -> np.number:
-        if not np.issubdtype(type(arg), np.number):
-            raise TypeError("Arg should be float, is %s" % type(arg))
-        
-        if self.lower <= self.upper:
-            if arg <= self.lower:
-                return 0
-            elif arg >= self.upper:
-                return 1
-        else:
-            if arg >= self.lower:
-                return 0
-            elif arg <= self.upper:
-                return 1
-               
-        return (arg - self.lower)/(self.upper - self.lower)
-        
-        
-    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
-        if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
-        
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
-        
-        x = (self.upper - self.lower)*alpha + self.lower
-        if self.upper > self.lower:
-            return x, self.upper
-        else:
-            return self.upper, x
-    
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, RampFuzzyNumber):
-            return NotImplemented
-        return self.lower == other.lower and self.upper == other.upper
-    
-    def fuzziness(self) -> np.number:
-        try:
-            return self.f
-        except AttributeError:
-            func = lambda x: (x - self.lower)/(self.upper - self.lower)
-            func_int = lambda x: func(x)*np.log(1/func(x)) + (1 - func(x))*np.log2(1/(1-func(x)))
-            self.f : np.number = sp.integrate.quad(func_int, self.lower, self.upper)[0]
-            return self.f
+        super().__init__(partial(mf.linear_z_shaped, 
+                                 a = left_upper, 
+                                 b = right_lower), epsilon, bound=(-np.inf, right_lower))
 
+        self.__left_upper = left_upper
+        self.__right_lower = right_lower
 
+class LinearSFuzzySet(ContinuousFuzzySet):
 
+    def __init__(self, 
+                 left_lower: np.number,
+                 right_upper: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(left_lower), np.number):
+            raise TypeError("left_lower should be a number")
+        
+        if not np.issubdtype(type(right_upper), np.number):
+            raise TypeError("right_upper should be a number")
+        
+        if not (left_lower <= right_upper):
+            raise ValueError("Parameters left_lower and right_upper should be left_lower <= right_upper")
 
-class TriangularFuzzyNumber(FuzzyNumber):
-    '''
-    Implements a triangular fuzzy number
-    '''
-    def __init__(self, lower: np.number, middle: np.number, upper: np.number):
-        if not np.issubdtype(type(lower), np.number):
-            raise TypeError("Lower should be floats, is %s" % type(lower))
-        
-        if not np.issubdtype(type(middle), np.number):
-            raise TypeError("Middle should be floats, is %s" % type(middle))
+        super().__init__(partial(mf.linear_s_shaped, 
+                                 a = left_lower, 
+                                 b = right_upper), epsilon, bound=(left_lower, np.inf))
 
-        if not np.issubdtype(type(upper), np.number):
-            raise TypeError("Higher should be floats, is %s" % type(upper))
-        
-        if lower > middle or lower > upper:
-            raise ValueError("Lower should be smaller than Middle and Upper")
-        
-        if middle > upper:
-            raise ValueError("Middle should be smaller than Upper")
-        
-        self.lower = lower
-        self.middle = middle
-        self.upper = upper
+        self.__left_lower = left_lower
+        self.__right_upper = right_upper
 
-        self.min = lower
-        self.max = upper
+class GaussianFuzzySet(ContinuousFuzzySet):
 
-    def __call__(self, arg: np.number) -> np.number:
-        if not np.issubdtype(type(arg), np.number):
-            raise TypeError("Arg should be float, is %s" % type(arg))
+    def __init__(self, 
+                 mean: np.number,
+                 std: np.number,
+                 epsilon: np.number = 0.001) -> None:
         
-        if arg < self.lower or arg > self.upper:
-            return 0
-        elif arg >= self.lower and arg <= self.middle:
-            return (arg - self.lower)/(self.middle - self.lower)
-        else:
-            return (self.upper - arg)/(self.upper - self.middle)
-        
-    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
-        if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
-        
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
-        
-        low = alpha*(self.middle - self.lower) + self.lower
-        upp = self.upper - alpha*(self.upper - self.middle)
-        
-        return low, upp
-    
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, TriangularFuzzyNumber):
-            return NotImplemented
-        return self.lower == other.lower and self.middle == other.middle and self.upper == other.upper
-    
-    def fuzziness(self) -> np.number:
-        try:
-            return self.f
-        except AttributeError:
-            left = lambda x: (x - self.lower)/(self.middle - self.lower)
-            right = lambda x: (self.upper - x)/(self.upper - self.middle)
-            left_int = lambda x: left(x)*np.log(1/left(x)) + (1 - left(x))*np.log2(1/(1-left(x)))
-            right_int = lambda x: right(x)*np.log(1/right(x)) + (1 - right(x))*np.log2(1/(1-right(x)))
-            self.f : np.number = sp.integrate.quad(left_int, self.lower, self.middle)[0]
-            self.f += sp.integrate.quad(right_int, self.middle, self.upper)[0]
-            return self.f
-        
-class TrapezoidalFuzzyNumber(FuzzyNumber):
-    '''
-    Implements a trapezoidal fuzzy number 
-    '''
-    def __init__(self, lower: np.number, middle1: np.number, middle2: np.number, upper: np.number):
-        if not np.issubdtype(type(lower), np.number):
-            raise TypeError("Lower should be floats, is %s" % type(lower))
-        
-        if not np.issubdtype(type(middle1), np.number):
-            raise TypeError("Middle should be floats, is %s" % type(middle1))
-        
-        if not np.issubdtype(type(middle2), np.number):
-            raise TypeError("Middle should be floats, is %s" % type(middle2))
-
-        if not np.issubdtype(type(upper), np.number):
-            raise TypeError("Higher should be floats, is %s" % type(upper))
-        
-        if lower > middle1 or lower > middle2 or lower > upper:
-            raise ValueError("Lower should be the smallest input")
-        
-        if middle1 > middle2 or middle1 > upper:
-            raise ValueError("Middle1 should be smaller than Middle2 and Upper")
-        
-        if middle2 > upper:
-            raise ValueError("Upper should be the largest input")
-        
-        self.lower = lower
-        self.middle1 = middle1
-        self.middle2 = middle2
-        self.upper = upper
-
-        self.min = lower
-        self.max = upper
-
-    def __call__(self, arg: np.number) -> np.number:
-        if not np.issubdtype(type(arg), np.number):
-            raise TypeError("Arg should be float, is %s" % type(arg))
-        
-        if arg < self.lower or arg > self.upper:
-            return 0
-        elif self.lower <= arg  <= self.middle1:
-            return (arg - self.lower)/(self.middle1 - self.lower)
-        elif self.middle1 <= arg <= self.middle2:
-            return 1
-        else:
-            return (self.upper - arg)/(self.upper - self.middle2)
-        
-    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
-        if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
-        
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
-        
-        low = alpha*(self.middle1 - self.lower) + self.lower
-        upp = alpha*(self.upper - self.middle2) + self.middle2
-        
-        return low, upp
-    
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, TrapezoidalFuzzyNumber):
-            return NotImplemented
-        return self.lower == other.lower and self.middle1 == other.middle1 and self.middle2 == other.middle2 and self.upper == other.upper
-    
-    def fuzziness(self) -> np.number:
-        try:
-            return self.f
-        except AttributeError:
-            left = lambda x: (x - self.lower)/(self.middle1 - self.lower)
-            right = lambda x: (self.upper - x)/(self.upper - self.middle2)
-            left_int = lambda x: left(x)*np.log(1/left(x)) + (1 - left(x))*np.log2(1/(1-left(x)))
-            right_int = lambda x: right(x)*np.log(1/right(x)) + (1 - right(x))*np.log2(1/(1-right(x)))
-            self.f : np.number = sp.integrate.quad(left_int, self.lower, self.middle1)[0]
-            self.f += sp.integrate.quad(right_int, self.middle2, self.upper)[0]
-            return self.f
-        
-
-
-
-class GaussianFuzzyNumber(FuzzyNumber):
-    '''
-    Implements a Gaussian fuzzy number
-    '''
-    def __init__(self, mean: np.number, std: np.number):
         if not np.issubdtype(type(mean), np.number):
-            raise TypeError("Mean should be float, is %s" % type(mean))
+            raise TypeError("mean should be a number")
         
         if not np.issubdtype(type(std), np.number):
-            raise TypeError("Middle should be floats, is %s" % type(std))
+            raise TypeError("std should be a number")
         
-        if std < 0:
-            raise ValueError("std should be positive")
+        if std <= 0:
+            raise ValueError("std should greater than 0")
         
-        self.mean = mean
-        self.std = std
+        super().__init__(partial(mf.gaussian, mean, std), epsilon, bound=(-np.inf, np.inf))
 
-        self.min = self.mean - np.sqrt(2*self.std**2 * np.log(1/0.001))
-        self.max = self.mean + np.sqrt(2*self.std**2 * np.log(1/0.001))
+        self.__mean = mean
+        self.__std = std
 
-    def __call__(self, arg: np.number) -> np.number:
-        if not np.issubdtype(type(arg), np.number):
-            raise TypeError("Arg should be float, is %s" % type(arg))
+class Gaussian2FuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 mean1: np.number, 
+                 std1: np.number,
+                 mean2: np.number, 
+                 std2: np.number,
+                 epsilon: np.number = 0.001) -> None:
         
-        return np.exp(-(arg - self.mean)**2/(2*self.std**2))
+        if not np.issubdtype(type(mean1), np.number):
+            raise TypeError("mean1 should be a number")
         
-    def __getitem__(self, alpha: np.number) -> tuple[np.number, np.number]:
-        if not np.issubdtype(type(alpha), np.number):
-            raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
+        if not np.issubdtype(type(std1), np.number):
+            raise TypeError("std1 should be a number")
         
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha should be in [0,1], is %s" % alpha)
+        if std1 <= 0:
+            raise ValueError("std1 should greater than 0")
         
-        low = self.mean - np.sqrt(2*self.std**2 * np.log(1/alpha))
-        upp = self.mean + np.sqrt(2*self.std**2 * np.log(1/alpha))
+        if not np.issubdtype(type(mean2), np.number):
+            raise TypeError("mean2 should be a number")
         
-        return low, upp
-    
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, GaussianFuzzyNumber):
-            return NotImplemented
-        return self.mean == other.mean and self.std == other.std
-    
-    def fuzziness(self) -> np.number:
-        try:
-            return self.f
-        except AttributeError:
-            intgr = lambda x: self(x)*np.log(1/self(x)) + (1 - self(x))*np.log2(1/(1-self(x)))
-            self.f : np.number = sp.integrate.quad(intgr, self.min, self.max)[0]
-            return self.f
-            """
+        if not np.issubdtype(type(std2), np.number):
+            raise TypeError("std2 should be a number")
+        
+        if std2 <= 0:
+            raise ValueError("std2 should greater than 0")
+
+        if mean1 > mean2:
+            raise ValueError("mean1 should be less equal than mean2")
+        
+        super().__init__(partial(mf.gaussian2, 
+                                 mean1, 
+                                 std1, 
+                                 mean2, 
+                                 std2), epsilon, bound=(-np.inf, np.inf))
+
+        self.__mean1 = mean1
+        self.__std1 = std1
+        self.__mean2 = mean2
+        self.__std2 = std2
+
+class GBellFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 width: np.number, 
+                 slope: np.number,
+                 center: np.number, 
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(width), np.number):
+            raise TypeError("width should be a number")
+        
+        if width < 0:
+            raise ValueError("width should be a positive value")
+        
+        if not np.issubdtype(type(slope), np.number):
+            raise TypeError("slope should be a number")
+        
+        if slope < 0:
+            raise ValueError("slope should be a positive value")
+        
+        if not np.issubdtype(type(center), np.number):
+            raise TypeError("center should be a number")
+        
+        super().__init__(partial(mf.gbell, 
+                                 a = width, 
+                                 b = slope, 
+                                 c = center), epsilon, bound=(-np.inf, +np.inf))
+
+        self.__width = width
+        self.__slope = slope
+        self.__center = center
+
+class SigmoidalFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 width: np.number, 
+                 center: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(width), np.number):
+            raise TypeError("width should be a number")
+        
+        if width == 0:
+            raise ValueError("width should be a positive value or a negative")
+        
+        if not np.issubdtype(type(center), np.number):
+            raise TypeError("center should be a number")
+        
+        super().__init__(partial(mf.sigmoidal, 
+                                 a = width, 
+                                 c = center), epsilon, bound=(-np.inf, np.inf))
+
+        self.__width = width
+        self.__center = center
+
+class DiffSigmoidalFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 width1: np.number, 
+                 center1: np.number,
+                 width2: np.number, 
+                 center2: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(width1), np.number):
+            raise TypeError("width1 should be a number")
+        
+        if width1 == 0:
+            raise ValueError("width1 should be a positive value or a negative")
+        
+        if not np.issubdtype(type(center1), np.number):
+            raise TypeError("center1 should be a number")
+        
+        if not np.issubdtype(type(width2), np.number):
+            raise TypeError("width2 should be a number")
+        
+        if width2 == 0:
+            raise ValueError("width2 should be a positive value or a negative")
+        
+        if not np.issubdtype(type(center2), np.number):
+            raise TypeError("center2 should be a number")
+        
+        super().__init__(partial(mf.difference_sigmoidal, 
+                                 a1 = width1, 
+                                 c1 = center1, 
+                                 a2 = width2, 
+                                 c2 = center2), epsilon, bound=(-np.inf, np.inf))
+
+        self.__width1 = width1
+        self.__center1 = center1
+        self.__width2 = width2
+        self.__center2 = center2
+
+        
+class ProdSigmoidalFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 width1: np.number, 
+                 center1: np.number,
+                 width2: np.number, 
+                 center2: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(width1), np.number):
+            raise TypeError("width1 should be a number")
+        
+        if width1 == 0:
+            raise ValueError("width1 should be a positive value or a negative")
+        
+        if not np.issubdtype(type(center1), np.number):
+            raise TypeError("center1 should be a number")
+        
+        if not np.issubdtype(type(width2), np.number):
+            raise TypeError("width2 should be a number")
+        
+        if width2 == 0:
+            raise ValueError("width2 should be a positive value or a negative")
+        
+        if not np.issubdtype(type(center2), np.number):
+            raise TypeError("center2 should be a number")
+        
+        super().__init__(partial(mf.product_sigmoidal, 
+                                 a1 = width1, 
+                                 c1 = center1, 
+                                 a2 = width2, 
+                                 c2 = center2), epsilon, bound=(-np.inf, np.inf))
+
+        self.__width1 = width1
+        self.__center1 = center1
+        self.__width2 = width2
+        self.__center2 = center2
+
+class ZShapedFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 left_upper: np.number, 
+                 right_lower: np.number,
+                 bound: tuple[np.number, np.number],
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(left_upper), np.number):
+            raise TypeError("left_upper should be a number")
+        
+        if not np.issubdtype(type(right_lower), np.number):
+            raise TypeError("right_lower should be a number")
+        
+        if left_upper >= right_lower:
+            raise ValueError("left_upper should be less equal than right_lower ")
+                
+        super().__init__(partial(mf.z_shaped, 
+                                 a = left_upper, 
+                                 b = right_lower), epsilon, bound=(-np.inf, np.inf))
+
+        self.__left_upper = left_upper
+        self.__right_lower = right_lower
+
+class SShapedFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 left_lower: np.number, 
+                 right_upper: np.number,
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(left_lower), np.number):
+            raise TypeError("left_lower should be a number")
+        
+        if not np.issubdtype(type(right_upper), np.number):
+            raise TypeError("right_upper should be a number")
+        
+        if left_lower >= right_upper:
+            raise ValueError("left_upper should be less equal than right_lower ")
+                
+        super().__init__(partial(mf.s_shaped, 
+                                 a = left_lower, 
+                                 b = right_upper), epsilon, bound=(-np.inf, np.inf))
+
+        self.__left_lower = left_lower
+        self.__right_upper = right_upper
+
+class PiShapedFuzzySet(ContinuousFuzzySet):
+    def __init__(self, 
+                 left_lower: np.number, 
+                 left_upper: np.number,
+                 right_upper: np.number,
+                 right_lower: np.number, 
+                 epsilon: np.number = 0.001) -> None:
+        
+        if not np.issubdtype(type(left_lower), np.number):
+            raise TypeError("left_lower should be a number")
+        
+        if not np.issubdtype(type(left_upper), np.number):
+            raise TypeError("left_upper should be a number")
+        
+        if not np.issubdtype(type(right_upper), np.number):
+            raise TypeError("right_upper should be a number")
+        
+        if not np.issubdtype(type(right_lower), np.number):
+            raise TypeError("right_lower should be a number")
+        
+        if not (left_lower <= left_upper <= right_upper <= right_lower):
+            raise ValueError("Parameters should be left_lower <= left_upper <= right_upper <= right_lower ")
+                
+        super().__init__(partial(mf.pi_shaped, 
+                                 a = left_lower, 
+                                 b = left_upper,
+                                 c = right_upper, 
+                                 d = right_lower), epsilon, bound=(-np.inf, np.inf))
+
+        self.__left_lower = left_lower
+        self.__left_upper = left_upper
+        self.__right_upper = right_upper
+        self.__right_lower = right_lower
+
