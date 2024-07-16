@@ -55,7 +55,7 @@ class DiscreteFuzzySet(FuzzySet):
         Attribute dynamic controls whether the support set is exhaustive or not (i.e. there exist objects not in items
         whose membership degree is 0)
 
-        Internally the constructor uses a dictionary (self.set) to enable fast look-up of membership degrees
+        Internally the constructor uses a dictionary (self.__set) to enable fast look-up of membership degrees
         '''
         if type(items) != list and type(items) != np.ndarray:
             raise TypeError("items should be list or numpy.array")
@@ -66,8 +66,8 @@ class DiscreteFuzzySet(FuzzySet):
         if type(dynamic) != bool:
             raise TypeError("dynamic should be bool")
         
-        self.items = np.array(items)
-        self.set = dict(zip(items, range(len(items))))
+        self.__items = np.array(items)
+        self.__set = dict(zip(items, range(len(items))))
 
         for m in memberships:
             if not np.issubdtype(type(m), np.number):
@@ -75,23 +75,35 @@ class DiscreteFuzzySet(FuzzySet):
             if  m < 0 or m > 1:
                 raise ValueError("Membership degrees should be floats in [0,1], is %s" % m)
             
-        self.memberships = np.array(memberships)
-        self.dynamic = dynamic
+        self.__memberships = np.array(memberships)
+        self.__dynamic = dynamic
 
+    @property
+    def memberships(self) -> np.ndarray:
+        return self.__memberships
+    
+    @property
+    def set(self) -> set:
+        return self.__set
+    
+    @property
+    def items(self) -> set:
+        return self.__items
+    
     def __call__(self, arg):
         '''
-        Gets the membership degree of arg. Uses self.set to enable quick look-up.
+        Gets the membership degree of arg. Uses self.__set to enable quick look-up.
         Behavior changes according to value of dynamic
         '''
-        if arg not in self.set.keys():
-            if self.dynamic:
-                self.set[arg] = len(self.items)
-                self.items = np.append(self.items, arg)
-                self.memberships = np.append(self.memberships, 0.0)
+        if arg not in self.__set.keys():
+            if self.__dynamic:
+                self.__set[arg] = len(self.__items)
+                self.__items = np.append(self.__items, arg)
+                self.__memberships = np.append(self.__memberships, 0.0)
             else:
                 raise ValueError("%s not in the support of the fuzzy set" % arg)
              
-        return self.memberships[self.set[arg]]
+        return self.__memberships[self.__set[arg]]
         
     def __getitem__(self, alpha: np.number) -> np.ndarray:
         '''
@@ -103,7 +115,7 @@ class DiscreteFuzzySet(FuzzySet):
         if alpha < 0 or alpha > 1:
             raise ValueError("Alpha should be in [0,1], is %s" % alpha)
         
-        return self.items[self.memberships >= alpha]
+        return self.__items[self.__memberships >= alpha]
     
     def __eq__(self, other: object) -> bool:
         '''
@@ -112,7 +124,7 @@ class DiscreteFuzzySet(FuzzySet):
         if not isinstance(other, DiscreteFuzzySet):
             return NotImplemented
         
-        for v in list(self.set.keys()) + list(other.set.keys()):
+        for v in list(self.__set.keys()) + list(other.__set.keys()):
             try:
                 v1 = self(v)
             except ValueError:
@@ -133,9 +145,9 @@ class DiscreteFuzzySet(FuzzySet):
         try:
             return self.f
         except AttributeError:
-            pos = self.memberships[self.memberships > 0]
+            pos = self.__memberships[self.__memberships > 0]
             pos = pos*np.log2(1/pos)
-            non = self.memberships[self.memberships < 1]
+            non = self.__memberships[self.__memberships < 1]
             non = (1-non)*np.log2(1/(1-non))
             self.f : np.number = np.sum(pos) + np.sum(non)
             return self.f
@@ -147,7 +159,7 @@ class DiscreteFuzzySet(FuzzySet):
         try:
             return self.h
         except AttributeError:
-            pos = self.memberships[self.memberships > 0]
+            pos = self.__memberships[self.__memberships > 0]
             sort = np.append(np.sort(pos)[::-1], 0)
             coeffs = sort[:-1] - sort[1:]
             sizes = np.log2(np.array([len(self[i]) for i in sort[:-1]]))
@@ -167,7 +179,7 @@ class ContinuousFuzzySet(FuzzySet):
 
     def __init__(self, 
                  memberships_function: Callable[[np.number], np.number], 
-                 bound: tuple[np.number, np.number],
+                 bound: tuple[np.number, np.number] = (-np.inf, np.inf),
                  epsilon: np.number = 1e-3) -> None:
         
         self.__epsilon: np.number = 1e-3
@@ -186,18 +198,18 @@ class ContinuousFuzzySet(FuzzySet):
         if bound[0] > bound[1]:
             raise ValueError("buond[0] should be less equal than buond[1]")
 
-        if not isinstance(epsilon, np.number):
+        if not np.issubdtype(type(epsilon), np.number):
             raise TypeError("epsilon should be a number")
 
-        if epsilon >= 1:
-            raise ValueError("Epsilon should be small number, ex: 1e-3")
+        if epsilon >= 1 or epsilon <= 0:
+            raise ValueError("Epsilon should be small positive number, ex: 1e-3")
 
         self.__memberships_function = memberships_function
         self.__epsilon = epsilon
         self.__bound = bound
 
-        self.fuzziness()
-        self.hartley()
+        #self.fuzziness()
+        #self.hartley()
 
     
     def memberships_function(self, x: np.number) -> np.number:
@@ -254,8 +266,6 @@ class ContinuousFuzzySet(FuzzySet):
         analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
         values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
         '''
-        if self.bound == None:
-            raise AttributeError("You should define the interval on which you want compute alpha cut")
         if self._f == -1:
             self._f = sp.integrate.quad(lambda x: 1 - np.abs(2 * self(x) - 1), 
                                        self.bound[0], 
@@ -269,8 +279,6 @@ class ContinuousFuzzySet(FuzzySet):
         analytically: thus, we perform a numerical integration of the fuzziness function between the minimum and maximum
         values of the fuzzy set (it internally uses the __call__ method: notice that it is not implemented in ContinuousFuzzySet!)
         '''
-        if self.bound == None:
-            raise AttributeError("You should define the interval on which you want compute alpha cut")        
 
         if self._h == -1:
             

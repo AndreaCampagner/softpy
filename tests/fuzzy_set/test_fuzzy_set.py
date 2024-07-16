@@ -31,12 +31,11 @@ class TestContinuousFuzzySet:
                 (1, 1e-3, (0, 0), TypeError),
                 (lambda x: 2 if x == 0 else 0, 1e-3, (0, 0), None), 
                 (lambda x: 1 if x == 0 else -1, 1e-3, (0, 0), None),
-                (gaussian, 1e-3, (0, 1), None),
-                (gaussian, (0,1), (0, 1), TypeError), #check epsilon
-                (gaussian, 2, (0, 1), ValueError),
-                (gaussian, -1e-3, (0, 1), ValueError),
-                (gaussian, 1e-3, 2, TypeError), #check bound
-                (gaussian, 1e-3, (1, 0), ValueError)
+                (gaussian, 1e-3,  (0, 0), None),
+                (gaussian, (0, 1),  (0, 0), TypeError), #check epsilon
+                (gaussian, 2,  (0, 0), ValueError),
+                (gaussian, -1e-3,  (0, 0), ValueError),
+                (gaussian, 1e-3, 2, TypeError) #check bound
             ])
     def test_creation(self,
                       memberships: Callable, 
@@ -46,29 +45,29 @@ class TestContinuousFuzzySet:
         
         if exception_expected == None:
             with not_raises() as e_info:
-                lfs = ContinuousFuzzySet(memberships, epsilon, bound)
+                lfs = ContinuousFuzzySet(memberships, bound, epsilon)
         else:
             with pytest.raises(exception_expected) as e_info:
-                lfs = ContinuousFuzzySet(memberships, epsilon, bound)
+                lfs = ContinuousFuzzySet(memberships, bound, epsilon)
 
     @pytest.mark.parametrize(
             "fuzzy_set,alpha_cut,exception_expected", 
             [
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.1, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.2, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.3, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.4, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.5, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.6, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.7, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.7, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.8, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.9, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 0.1, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 2, ValueError),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 'a', TypeError),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), 2.2, ValueError),
-                (ContinuousFuzzySet(gaussian, 1e-3, (0, 1)), -1.1, ValueError),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.1, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.2, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.3, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.4, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.5, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.6, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.7, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.7, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.8, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.9, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 0.1, None),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 2, ValueError),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 'a', TypeError),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), 2.2, ValueError),
+                (ContinuousFuzzySet(gaussian, bound = (0, 1), epsilon = 1e-3), -1.1, ValueError),
             ])
     def test_alpha_cut(self, 
                        fuzzy_set: ContinuousFuzzySet, 
@@ -93,16 +92,16 @@ class TestContinuousFuzzySet:
     @pytest.mark.parametrize(
             "fuzzy_set,arg,exception_expected",
             [
-                (ContinuousFuzzySet(gaussian, 1e-3), 'a', TypeError),
-                (ContinuousFuzzySet(gaussian, 1e-3), 3, None),
-                (ContinuousFuzzySet(gaussian, 1e-3), 0, None),
-                (ContinuousFuzzySet(gaussian, 1e-3), 1, None),
-                (ContinuousFuzzySet(gaussian, 1e-3), 1.2, None),
-                (ContinuousFuzzySet(gaussian, 1e-3), 1.5, None),
-                (ContinuousFuzzySet(gaussian, 1e-3), 1.7, None),
-                (ContinuousFuzzySet(gaussian, 1e-3, (1, 2)), 2, None),
-                (ContinuousFuzzySet(lambda x: 2 if x == 2 else 0, 1e-3, (1, 2)), 2, None),
-                (ContinuousFuzzySet(lambda x: 1 if x == 2 else -1, 1e-3, (1, 2)), 2, None),
+                (ContinuousFuzzySet(gaussian), 'a', TypeError),
+                (ContinuousFuzzySet(gaussian), 3, None),
+                (ContinuousFuzzySet(gaussian), 0, None),
+                (ContinuousFuzzySet(gaussian), 1, None),
+                (ContinuousFuzzySet(gaussian), 1.2, None),
+                (ContinuousFuzzySet(gaussian), 1.5, None),
+                (ContinuousFuzzySet(gaussian), 1.7, None),
+                (ContinuousFuzzySet(gaussian, bound = (1, 2)), 2, None),
+                (ContinuousFuzzySet(lambda x: 2 if x == 2 else 0, (1, 2), 1e-3), 2, None),
+                (ContinuousFuzzySet(lambda x: 1 if x == 2 else -1, (1, 2), 1e-3), 2, None),
             ]
             )
     def test_memberships(self, 
