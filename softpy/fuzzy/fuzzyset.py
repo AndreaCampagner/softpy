@@ -63,6 +63,9 @@ class DiscreteFuzzySet(FuzzySet):
         if type(memberships) != list and type(memberships) != np.ndarray:
             raise TypeError("memberships should be list or numpy.array")
         
+        if len(items) != len(memberships):
+            raise ValueError("items and memberships should have the same length")
+
         if type(dynamic) != bool:
             raise TypeError("dynamic should be bool")
         
@@ -319,7 +322,7 @@ class TriangularFuzzySet(ContinuousFuzzySet):
             raise ValueError("Parameters a, b and c should be a <= b <= c")
 
         super().__init__(partial(mf.triangular, a = left, b = spike, c = right), 
-                         epsilon, 
+                         epsilon=epsilon, 
                          bound=(left, right))
 
         self.__left = left
@@ -355,7 +358,7 @@ class TrapezoidalFuzzySet(ContinuousFuzzySet):
                                  a = left_lower, 
                                  b = left_upper, 
                                  c = right_upper, 
-                                 d = right_lower), epsilon, bound=(left_lower, right_lower))
+                                 d = right_lower), epsilon=epsilon, bound=(left_lower, right_lower))
 
         self.__left_lower = left_lower
         self.__left_upper = left_upper
@@ -380,7 +383,7 @@ class LinearZFuzzySet(ContinuousFuzzySet):
 
         super().__init__(partial(mf.linear_z_shaped, 
                                  a = left_upper, 
-                                 b = right_lower), epsilon, bound=(-np.inf, right_lower))
+                                 b = right_lower), epsilon=epsilon, bound=(-np.inf, right_lower))
 
         self.__left_upper = left_upper
         self.__right_lower = right_lower
@@ -403,7 +406,7 @@ class LinearSFuzzySet(ContinuousFuzzySet):
 
         super().__init__(partial(mf.linear_s_shaped, 
                                  a = left_lower, 
-                                 b = right_upper), epsilon, bound=(left_lower, np.inf))
+                                 b = right_upper), epsilon=epsilon, bound=(left_lower, np.inf))
 
         self.__left_lower = left_lower
         self.__right_upper = right_upper
@@ -424,7 +427,7 @@ class GaussianFuzzySet(ContinuousFuzzySet):
         if std <= 0:
             raise ValueError("std should greater than 0")
         
-        super().__init__(partial(mf.gaussian, mean, std), epsilon, bound=(-np.inf, np.inf))
+        super().__init__(partial(mf.gaussian, mean=mean, std=std), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__mean = mean
         self.__std = std
@@ -459,10 +462,10 @@ class Gaussian2FuzzySet(ContinuousFuzzySet):
             raise ValueError("mean1 should be less equal than mean2")
         
         super().__init__(partial(mf.gaussian2, 
-                                 mean1, 
-                                 std1, 
-                                 mean2, 
-                                 std2), epsilon, bound=(-np.inf, np.inf))
+                                 mean1=mean1, 
+                                 std1=std1, 
+                                 mean2=mean2, 
+                                 std2=std2), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__mean1 = mean1
         self.__std1 = std1
@@ -479,7 +482,7 @@ class GBellFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(width), np.number):
             raise TypeError("width should be a number")
         
-        if width < 0:
+        if width <= 0:
             raise ValueError("width should be a positive value")
         
         if not np.issubdtype(type(slope), np.number):
@@ -494,7 +497,7 @@ class GBellFuzzySet(ContinuousFuzzySet):
         super().__init__(partial(mf.gbell, 
                                  a = width, 
                                  b = slope, 
-                                 c = center), epsilon, bound=(-np.inf, +np.inf))
+                                 c = center), epsilon=epsilon, bound=(-np.inf, +np.inf))
 
         self.__width = width
         self.__slope = slope
@@ -517,7 +520,7 @@ class SigmoidalFuzzySet(ContinuousFuzzySet):
         
         super().__init__(partial(mf.sigmoidal, 
                                  a = width, 
-                                 c = center), epsilon, bound=(-np.inf, np.inf))
+                                 c = center), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__width = width
         self.__center = center
@@ -548,11 +551,14 @@ class DiffSigmoidalFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(center2), np.number):
             raise TypeError("center2 should be a number")
         
+        if center1 >= center2:
+            raise ValueError("center1 should be less equal than center2")
+        
         super().__init__(partial(mf.difference_sigmoidal, 
                                  a1 = width1, 
                                  c1 = center1, 
                                  a2 = width2, 
-                                 c2 = center2), epsilon, bound=(-np.inf, np.inf))
+                                 c2 = center2), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__width1 = width1
         self.__center1 = center1
@@ -586,11 +592,14 @@ class ProdSigmoidalFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(center2), np.number):
             raise TypeError("center2 should be a number")
         
+        if center1 >= center2:
+            raise ValueError("center1 should be less equal than center2")
+        
         super().__init__(partial(mf.product_sigmoidal, 
                                  a1 = width1, 
                                  c1 = center1, 
                                  a2 = width2, 
-                                 c2 = center2), epsilon, bound=(-np.inf, np.inf))
+                                 c2 = center2), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__width1 = width1
         self.__center1 = center1
@@ -615,7 +624,7 @@ class ZShapedFuzzySet(ContinuousFuzzySet):
                 
         super().__init__(partial(mf.z_shaped, 
                                  a = left_upper, 
-                                 b = right_lower), epsilon, bound=(-np.inf, np.inf))
+                                 b = right_lower), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__left_upper = left_upper
         self.__right_lower = right_lower
@@ -637,7 +646,7 @@ class SShapedFuzzySet(ContinuousFuzzySet):
                 
         super().__init__(partial(mf.s_shaped, 
                                  a = left_lower, 
-                                 b = right_upper), epsilon, bound=(-np.inf, np.inf))
+                                 b = right_upper), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__left_lower = left_lower
         self.__right_upper = right_upper
@@ -669,7 +678,7 @@ class PiShapedFuzzySet(ContinuousFuzzySet):
                                  a = left_lower, 
                                  b = left_upper,
                                  c = right_upper, 
-                                 d = right_lower), epsilon, bound=(-np.inf, np.inf))
+                                 d = right_lower), epsilon=epsilon, bound=(-np.inf, np.inf))
 
         self.__left_lower = left_lower
         self.__left_upper = left_upper
