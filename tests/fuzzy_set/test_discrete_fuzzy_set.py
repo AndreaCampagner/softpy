@@ -1,25 +1,12 @@
 import sys
-from contextlib import contextmanager
 
 import numpy as np
 import pytest
 
-sys.path.append(__file__ + "/..")
+sys.path.append(__file__ + "/../..")
 
 from softpy.fuzzy.fuzzyset import DiscreteFuzzySet
-
-@contextmanager
-def not_raises():
-    try:
-        yield
-        
-    except Exception as err:
-        raise AssertionError(
-            # "Did raise exception {0} when it should not!".format(
-                
-            # )
-            repr(err)
-        )
+from tests.fuzzy_set.configuration import not_raises 
 
 class TestDiscreteFuzzySet:
     @pytest.mark.parametrize(

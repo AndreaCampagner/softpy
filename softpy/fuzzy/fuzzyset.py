@@ -55,7 +55,7 @@ class DiscreteFuzzySet(FuzzySet):
         Attribute dynamic controls whether the support set is exhaustive or not (i.e. there exist objects not in items
         whose membership degree is 0)
 
-        Internally the constructor uses a dictionary (self.__set) to enable fast look-up of membership degrees
+        Internally the constructor uses a dictionary (self.__set_items) to enable fast look-up of membership degrees
         '''
         if type(items) != list and type(items) != np.ndarray:
             raise TypeError("items should be list or numpy.array")
@@ -70,7 +70,7 @@ class DiscreteFuzzySet(FuzzySet):
             raise TypeError("dynamic should be bool")
         
         self.__items = np.array(items)
-        self.__set = dict(zip(items, range(len(items))))
+        self.__set_items = dict(zip(items, range(len(items))))
 
         for m in memberships:
             if not np.issubdtype(type(m), np.number):
@@ -86,8 +86,8 @@ class DiscreteFuzzySet(FuzzySet):
         return self.__memberships
     
     @property
-    def set(self) -> set:
-        return self.__set
+    def set_items(self) -> set:
+        return self.__set_items
     
     @property
     def items(self) -> set:
@@ -95,18 +95,18 @@ class DiscreteFuzzySet(FuzzySet):
     
     def __call__(self, arg):
         '''
-        Gets the membership degree of arg. Uses self.__set to enable quick look-up.
+        Gets the membership degree of arg. Uses self.__set_items to enable quick look-up.
         Behavior changes according to value of dynamic
         '''
-        if arg not in self.__set.keys():
+        if arg not in self.__set_items.keys():
             if self.__dynamic:
-                self.__set[arg] = len(self.__items)
+                self.__set_items[arg] = len(self.__items)
                 self.__items = np.append(self.__items, arg)
                 self.__memberships = np.append(self.__memberships, 0.0)
             else:
                 raise ValueError("%s not in the support of the fuzzy set" % arg)
              
-        return self.__memberships[self.__set[arg]]
+        return self.__memberships[self.__set_items[arg]]
         
     def __getitem__(self, alpha: np.number) -> np.ndarray:
         '''
@@ -127,7 +127,7 @@ class DiscreteFuzzySet(FuzzySet):
         if not isinstance(other, DiscreteFuzzySet):
             return NotImplemented
         
-        for v in list(self.__set.keys()) + list(other.__set.keys()):
+        for v in list(self.__set_items.keys()) + list(other.__set_items.keys()):
             try:
                 v1 = self(v)
             except ValueError:
@@ -610,7 +610,6 @@ class ZShapedFuzzySet(ContinuousFuzzySet):
     def __init__(self, 
                  left_upper: np.number, 
                  right_lower: np.number,
-                 bound: tuple[np.number, np.number],
                  epsilon: np.number = 0.001) -> None:
         
         if not np.issubdtype(type(left_upper), np.number):
@@ -619,7 +618,7 @@ class ZShapedFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(right_lower), np.number):
             raise TypeError("right_lower should be a number")
         
-        if left_upper >= right_lower:
+        if left_upper > right_lower:
             raise ValueError("left_upper should be less equal than right_lower ")
                 
         super().__init__(partial(mf.z_shaped, 
@@ -641,7 +640,7 @@ class SShapedFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(right_upper), np.number):
             raise TypeError("right_upper should be a number")
         
-        if left_lower >= right_upper:
+        if left_lower > right_upper:
             raise ValueError("left_upper should be less equal than right_lower ")
                 
         super().__init__(partial(mf.s_shaped, 
@@ -671,7 +670,7 @@ class PiShapedFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(right_lower), np.number):
             raise TypeError("right_lower should be a number")
         
-        if not (left_lower <= left_upper <= right_upper <= right_lower):
+        if not (left_lower <= left_upper < right_upper <= right_lower):
             raise ValueError("Parameters should be left_lower <= left_upper <= right_upper <= right_lower ")
                 
         super().__init__(partial(mf.pi_shaped, 

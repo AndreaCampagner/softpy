@@ -1,6 +1,9 @@
 from __future__ import annotations
+from typing import Callable
 import numpy as np
-from .fuzzyset import FuzzySet, LambdaFuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
+
+from softpy.fuzzy.operations import ContinuousFuzzyCombination, DiscreteFuzzyCombination, minimum
+from .fuzzyset import FuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import partial
@@ -26,64 +29,50 @@ class MamdaniRule(FuzzyRule):
     The contructor builds the rule as a new FuzzySet (specifically, a FuzzyCombination) by iteratively combining the FuzzySets in the premise
     and then with the consequent.
     '''
-    def __init__(self, premise : dict[str, FuzzySet], consequent_name: str, consequent: FuzzySet,
-                 tnorm):
+
+    def __init__(self, 
+                 premises : list[FuzzySet], 
+                 tnorm_operation: Callable[[FuzzySet, FuzzySet], 
+                                           ContinuousFuzzyCombination | DiscreteFuzzyCombination] = minimum):
         
-        if not isinstance(premise, dict):
+        if not isinstance(premises, list):
             raise TypeError("premise should be a dictionary")
         
-        if not isinstance(consequent_name, str):
-            raise TypeError("consequent_name should be a string")
-
-        for k in premise:
-            if not isinstance(premise[k], FuzzySet):
+        for k in premises:
+            if not isinstance(k, FuzzySet):
                 raise TypeError("All premises should be FuzzySet") 
 
-        if not isinstance(consequent, FuzzySet):
-            raise TypeError("consequent should be a FuzzySet")  
+        if not isinstance(tnorm_operation, Callable):
+            raise TypeError("tnorm_operation should be a tnorm fuzzy operation")  
 
+        if len(premises) <= 1:
+            raise ValueError("premises should be a list of almost 2 elements")  
         
-        self.premise = premise
-        self.consequent = consequent
-        self.consequent_name = consequent_name
-        self.tnorm = tnorm
-
-        self.names = np.array(list(self.premise.keys()))
-        curr = self.premise[self.names[-1]]
-        self.antecedent = None
-        if len(self.names) > 1:
-            for k in self.names[::-1][1:]:
-                self.antecedent = self.tnorm(self.premise[k], curr)
-                curr = self.antecedent
-        else:
-            self.antecedent = curr
-        self.rule = self.tnorm(self.antecedent, self.consequent)      
+        self.__rule: ContinuousFuzzyCombination | DiscreteFuzzyCombination = None
+        self.__tnorm_operation: Callable = tnorm_operation
+        self.__premises: list[FuzzySet] = premises
         
+        curr = self.__premises[-1]
+        for i in range(1, len(self.__premises)):
+            curr = self.__tnorm_operation(self.__premises[- 1 - i], curr)
 
-    def evaluate(self, params : dict):
+        self.__rule = curr
+
+    @property
+    def rule(self) -> DiscreteFuzzyCombination | ContinuousFuzzyCombination:
+        return self.__rule
+
+    def evaluate(self, params : list[np.number]) -> np.number:
         '''
-        It evaluates the MamdaniRule at a certain set of values, by computing the corresponding membership degrees: in particular, the evaluate
-        method accepts a specification of values for the FuzzySets in the premise and return a LambdaFuzzySet that evaluates the rule at any given
-        value of the consequent.
+        It evaluates the MamdaniRule given a list of elements, ones per premise.
         '''
-        if not isinstance(params, dict):
-            raise TypeError("params should be a dict or number")
+        if not isinstance(params, list):
+            raise TypeError("params should be a list of number")
         
-        evals = None
+        if len(params) != len(self.__premises):
+            raise TypeError("params should have the same length of self.__premises")
         
-        if len(self.names) > 1:
-            temp_vals = [None] *self.names.shape[0]
-            
-            for k in params.keys():
-                idx = np.where(self.names == k)[0]
-                temp_vals[idx] = params[k]
-
-            evals = self.antecedent(temp_vals)
-        else:
-            for k in params.keys():
-                if k in self.names:
-                    evals = self.antecedent(params[k])
-        return LambdaFuzzySet(lambda u : partial(self.rule.op, evals)(self.consequent(u)))
+        return self.__rule(params)
     
 
 class SugenoRule(FuzzyRule):

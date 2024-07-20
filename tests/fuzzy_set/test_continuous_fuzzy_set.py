@@ -1,28 +1,14 @@
 import sys
-from contextlib import contextmanager
 from typing import Callable
 
 import numpy as np
 import pytest
 
-sys.path.append(__file__ + "/..")
+sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiffSigmoidalFuzzySet, GBellFuzzySet, Gaussian2FuzzySet, GaussianFuzzySet, LinearSFuzzySet, LinearZFuzzySet, ProdSigmoidalFuzzySet, SigmoidalFuzzySet, TrapezoidalFuzzySet, TriangularFuzzySet
+from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiffSigmoidalFuzzySet, GBellFuzzySet, Gaussian2FuzzySet, GaussianFuzzySet, LinearSFuzzySet, LinearZFuzzySet, PiShapedFuzzySet, ProdSigmoidalFuzzySet, SShapedFuzzySet, SigmoidalFuzzySet, TrapezoidalFuzzySet, TriangularFuzzySet, ZShapedFuzzySet
 from softpy.fuzzy.memberships_function import gaussian
-
-@contextmanager
-def not_raises():
-    try:
-        yield
-        
-    except Exception as err:
-        raise AssertionError(
-            # "Did raise exception {0} when it should not!".format(
-                
-            # )
-            repr(err)
-        )
-
+from tests.fuzzy_set.configuration import not_raises 
 
 class TestContinuousFuzzySet:
     @pytest.mark.parametrize(
@@ -603,6 +589,150 @@ class TestProdSigmoidalFuzzySet:
                 (ProdSigmoidalFuzzySet(1, 1, 1, 2), -1, None),
                 (ProdSigmoidalFuzzySet(1, 1, 1, 2), 0.5, None),
                 (ProdSigmoidalFuzzySet(1, 1, 1, 2), 'a', TypeError),
+            ])
+    def test_memberships(self, 
+                         fuzzy_set: ContinuousFuzzySet, 
+                         arg: np.number,
+                         exception_expected: Exception):
+        if exception_expected == None:
+            with not_raises() as e_info:
+                assert fuzzy_set(arg) == fuzzy_set.memberships_function(arg)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                memberships = fuzzy_set(arg)
+
+class TestZShapedFuzzySet:
+    @pytest.mark.parametrize(
+            "left_upper,right_lower,exception_expected", 
+            [
+                (1, 2, None),
+                (1, 1, None),
+                (1, 0, ValueError),
+                ('a', 1, TypeError),
+                (1, 'a', TypeError),
+            ])
+    def test_creation(self,
+                      left_upper: np.number, 
+                      right_lower: np.number,
+                      exception_expected: Exception):
+        
+        if exception_expected == None:
+            with not_raises() as e_info:
+                lfs = ZShapedFuzzySet(left_upper,
+                                      right_lower)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                lfs = ZShapedFuzzySet(left_upper,
+                                      right_lower)
+    
+    @pytest.mark.parametrize(
+            "fuzzy_set,arg,exception_expected",
+            [
+                (ZShapedFuzzySet(0, 1), 0, None),
+                (ZShapedFuzzySet(0, 1), 1, None),
+                (ZShapedFuzzySet(0, 1), 2, None),
+                (ZShapedFuzzySet(0, 1), -1, None),
+                (ZShapedFuzzySet(0, 1), 0.5, None),
+                (ZShapedFuzzySet(0, 1), 'a', TypeError),
+            ])
+    def test_memberships(self, 
+                         fuzzy_set: ContinuousFuzzySet, 
+                         arg: np.number,
+                         exception_expected: Exception):
+        if exception_expected == None:
+            with not_raises() as e_info:
+                assert fuzzy_set(arg) == fuzzy_set.memberships_function(arg)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                memberships = fuzzy_set(arg)
+
+class TestSShapedFuzzySet:
+    @pytest.mark.parametrize(
+            "left_upper,right_lower,exception_expected", 
+            [
+                (1, 2, None),
+                (1, 1, None),
+                (1, 0, ValueError),
+                ('a', 1, TypeError),
+                (1, 'a', TypeError),
+            ])
+    def test_creation(self,
+                      left_upper: np.number, 
+                      right_lower: np.number,
+                      exception_expected: Exception):
+        
+        if exception_expected == None:
+            with not_raises() as e_info:
+                lfs = SShapedFuzzySet(left_upper,
+                                      right_lower)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                lfs = SShapedFuzzySet(left_upper,
+                                      right_lower)
+    
+    @pytest.mark.parametrize(
+            "fuzzy_set,arg,exception_expected",
+            [
+                (SShapedFuzzySet(0, 1), 0, None),
+                (SShapedFuzzySet(0, 1), 1, None),
+                (SShapedFuzzySet(0, 1), 2, None),
+                (SShapedFuzzySet(0, 1), -1, None),
+                (SShapedFuzzySet(0, 1), 0.5, None),
+                (SShapedFuzzySet(0, 1), 'a', TypeError),
+            ])
+    def test_memberships(self, 
+                         fuzzy_set: ContinuousFuzzySet, 
+                         arg: np.number,
+                         exception_expected: Exception):
+        if exception_expected == None:
+            with not_raises() as e_info:
+                assert fuzzy_set(arg) == fuzzy_set.memberships_function(arg)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                memberships = fuzzy_set(arg)
+
+class TestPiShapedFuzzySet:
+    @pytest.mark.parametrize(
+            "left_lower,left_upper,right_upper,right_lower,exception_expected", 
+            [
+                (1, 2, 3, 4, None),
+                (1, 1, 3, 4, None),
+                (1, 2, 4, 4, None),
+                (1, 2, 2, 4, ValueError),
+                ('a', 2, 2, 4, TypeError),
+                (1, 'a', 2, 4, TypeError),
+                (1, 2, 'a', 4, TypeError),
+                (1, 2, 3, 'a', TypeError),
+            ])
+    def test_creation(self,
+                      left_lower: np.number, 
+                      left_upper: np.number, 
+                      right_upper: np.number,
+                      right_lower: np.number,
+                      exception_expected: Exception):
+        
+        if exception_expected == None:
+            with not_raises() as e_info:
+                lfs = PiShapedFuzzySet(left_lower,
+                                       left_upper,
+                                       right_upper,
+                                       right_lower)
+        else:
+            with pytest.raises(exception_expected) as e_info:
+                lfs = PiShapedFuzzySet(left_lower,
+                                       left_upper,
+                                       right_upper,
+                                       right_lower)
+    
+    @pytest.mark.parametrize(
+            "fuzzy_set,arg,exception_expected",
+            [
+                (PiShapedFuzzySet(1, 2, 3, 4), 0, None),
+                (PiShapedFuzzySet(1, 2, 3, 4), 1, None),
+                (PiShapedFuzzySet(1, 2, 3, 4), 2, None),
+                (PiShapedFuzzySet(1, 2, 3, 4), -1, None),
+                (PiShapedFuzzySet(1, 2, 3, 4), 0.5, None),
+                (PiShapedFuzzySet(1, 2, 3, 4), 'a', TypeError),
             ])
     def test_memberships(self, 
                          fuzzy_set: ContinuousFuzzySet, 
