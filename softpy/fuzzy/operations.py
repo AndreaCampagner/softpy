@@ -130,154 +130,146 @@ class ContinuousFuzzyCombination(ContinuousFuzzySet):
     Implements a binary operator on ContinuousFuzzySet instances
     '''
     def __init__(self, 
-                 left: ContinuousFuzzySet, 
-                 right: ContinuousFuzzySet, 
+                 fuzzy_sets: list[ContinuousFuzzySet], 
                  op: Callable):
-
-        if (not isinstance(left, ContinuousFuzzySet) or 
-            not isinstance(right, ContinuousFuzzySet)):
-            raise TypeError("left and right should be continuous fuzzy sets")
-            
+        if not isinstance(fuzzy_sets, list):
+            raise TypeError("fuzzy_sets should be a list")   
+    
+        if len(fuzzy_sets) == 0:
+            raise TypeError("fuzzy_sets list should be not empty")
+        
         if not isinstance(op, Callable):
             raise TypeError("op should be a callable")
         
-        self.__left = left
-        self.__right = right
+        for f in fuzzy_sets:
+            if not isinstance(f, ContinuousFuzzySet):
+                raise TypeError("all fuzzy_sets should be ContinuousFuzzySet")    
+            
+        bound = list(fuzzy_sets[0].bound)
+        for i in range(len(fuzzy_sets)):
+            if bound[0] > fuzzy_sets[i].bound[0]:
+                bound[0] = fuzzy_sets[i].bound[0]
+            if bound[1] < fuzzy_sets[i].bound[1]:
+                bound[1] = fuzzy_sets[i].bound[1]
 
-        super().__init__(lambda x: op(left(x), right(x)), 
-                         (
-                             np.min([self.__left.bound[0], self.__right.bound[0]]),
-                             np.max([self.__left.bound[1], self.__right.bound[1]])
-                         ))
+        self.__fuzzy_sets: list[ContinuousFuzzySet] = fuzzy_sets
+        self.__op: Callable = op
 
 
-    def __call__(self, arg: np.number | np.ndarray | list):
-        if (isinstance(arg, tuple) or isinstance(arg, np.ndarray) or isinstance(arg, list)):
-            if len(arg) > 2:
-                return self.memberships_function(self.left(arg[0]), self.right(arg[1:]))
+        super().__init__(self.__memberships_function, tuple(bound))
+
+    def __memberships_function(self, x: list[np.number] | np.number):
+        ris = 0
+        if isinstance(x, list):
+            ris = self.__fuzzy_sets[0](x[0])
+        else:
+            ris = self.__fuzzy_sets[0](x) if self.bound[0] <= x <= self.bound[1] else 0
+
+        for i in range(1, len(self.__fuzzy_sets)):
+            if isinstance(x, list):
+                memb_value = self.__fuzzy_sets[i](x[i])
             else:
-                return self.memberships_function(self.left(arg[0]), self.right(arg[1]))
-        elif np.issubdtype(arg, np.number):
-            return self.memberships_function(arg)
-        raise TypeError("arg should be a np.number | np.ndarray | list")
+                memb_value = self.__fuzzy_sets[i](x) if self.bound[0] <= x <= self.bound[1] else 0
+            ris = self.__op(ris, memb_value)
+        return ris
+    
+    def __call__(self, arg: np.number | list):
+        if not isinstance(arg, list) and not np.issubdtype(type(arg), np.number):
+            raise TypeError("arg should be a list or a number")   
+
+        return self.__memberships_function(arg)
+        
 
 class DiscreteFuzzyCombination(DiscreteFuzzySet):
     '''
     Implements a binary operator on DiscreteFuzzySet instances
     '''
-    def __init__(self, left: DiscreteFuzzySet, right: DiscreteFuzzySet, op: Callable, dynamic=True):
-        if not isinstance(left, DiscreteFuzzySet) or not isinstance(right, DiscreteFuzzySet):
-            raise TypeError("All arguments should be discrete fuzzy sets")
+    def __init__(self, 
+                 fuzzy_sets: list[DiscreteFuzzySet], 
+                 op: Callable,
+                 dynamic: bool = True):
+        if not isinstance(fuzzy_sets, list):
+            raise TypeError("fuzzy_sets should be a list")   
+    
+        if len(fuzzy_sets) == 0:
+            raise TypeError("fuzzy_sets list should be not empty")
         
         if not isinstance(op, Callable):
             raise TypeError("op should be a callable")
         
-        self.__left: DiscreteFuzzySet= left
-        self.__right: DiscreteFuzzySet = right
-
-        items = np.array(list(set(list(left.items) + list(right.items))))
-        set_items = dict(zip(list(items), range(len(items))))
+        items = []
+        for f in fuzzy_sets:
+            if not isinstance(f, DiscreteFuzzySet):
+                raise TypeError("all fuzzy_sets should be DiscreteFuzzySet")
+            items = items + list(f.items)
             
+        items = np.array(list(set(items)))
+        set_items = dict(zip(list(items), range(len(items))))
         memberships = np.zeros(len(items))
 
         take = lambda arr, i: arr[i] if 0 <= i < len(arr) else 0
         for e in set_items.keys():
-            memberships[set_items[e]] = op(take(self.__left.memberships, self.__left.set_items.get(e, -1)),
-                                     take(self.__right.memberships, self.__right.set_items.get(e, -1)))
+            memberships[set_items[e]] = take(fuzzy_sets[0].memberships, fuzzy_sets[0].set_items.get(e, -1))
+            for i in range(1, len(fuzzy_sets)):
+                memberships[set_items[e]] = op(memberships[set_items[e]],
+                                               take(fuzzy_sets[i].memberships, 
+                                                    fuzzy_sets[i].set_items.get(e, -1)))
             
         super().__init__(items, memberships, dynamic)
-    
 
 class ContinuousFuzzyNegation(ContinuousFuzzySet):
     '''
     Implements a unary operator on ContinuousFuzzySet instances
     '''
-    def __init__(self, fuzzy: ContinuousFuzzySet, op: Callable):
+    def __init__(self, fuzzy: ContinuousFuzzySet):
         if not isinstance(fuzzy, ContinuousFuzzySet):
             raise TypeError("Argument should be continuous fuzzy set")
             
         self.__fuzzy = fuzzy
-        self.op = op
-        super().__init__(lambda x: op(self.__fuzzy(x)), 
+        self.__op = negation
+        super().__init__(lambda x: self.__op(self.__fuzzy(x)), 
                          (-np.inf, np.inf))
 
-def negation(a: FuzzySet):
-    if isinstance(a, DiscreteFuzzySet):
-        return DiscreteFuzzySet(a.items, [1 - m for m in a.memberships])
-    elif isinstance(a, ContinuousFuzzySet):
-        return ContinuousFuzzyNegation(a, op=lambda x: 1 - x)
-    else:
-        raise TypeError("a should be either a discrete or continuous fuzzy set")
+class DiscreteFuzzyNegation(DiscreteFuzzySet):
+    '''
+    Implements a unary operator on ContinuousFuzzySet instances
+    '''
+    def __init__(self, fuzzy: DiscreteFuzzySet):
+        if not isinstance(fuzzy, DiscreteFuzzySet):
+            raise TypeError("Argument should be discrete fuzzy set")
+            
+        self.__fuzzy = fuzzy
+        self.__op = negation
+        super().__init__(fuzzy.items,
+                         [self.__op(m) for m in fuzzy.memberships], 
+                         fuzzy.dynamic)
 
-def minimum(a: FuzzySet, b: FuzzySet):
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=np.minimum)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=np.minimum)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
+def negation(membership: np.number):
+    return 1 - membership
 
-def maximum(a: FuzzySet, b: FuzzySet):
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=np.maximum)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=np.maximum)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def product(a: FuzzySet, b: FuzzySet):
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=np.multiply)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=np.multiply)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def probsum(a: FuzzySet, b: FuzzySet):
-    op = lambda x, y: 1 - (1-x)*(1-y)
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=op)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=op)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def lukasiewicz(a: FuzzySet, b: FuzzySet):
-    op = lambda x, y: np.max([0, x + y - 1])
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=op)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=op)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def boundedsum(a: FuzzySet, b: FuzzySet):
-    op = lambda x, y: np.min([x + y, 1])
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=op)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=op)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def drasticproduct(a: FuzzySet, b: FuzzySet):
-    op = lambda x, y: 1 if (x == 1 or y == 1) else 0
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=op)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=op)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
-    
-def drasticsum(a: FuzzySet, b: FuzzySet):
-    op = lambda x, y: x if y == 0 else y if x == 0 else 1
-    if isinstance(a, DiscreteFuzzySet) and isinstance(b, DiscreteFuzzySet):
-        return DiscreteFuzzyCombination(a, b, op=op)
-    elif isinstance(a, ContinuousFuzzySet) and isinstance(b, ContinuousFuzzySet):
-        return ContinuousFuzzyCombination(a,b, op=op)
-    else:
-        raise TypeError("a and b should be either a discrete or continuous fuzzy set")
+def minimum(m_left: np.number, m_right: np.number):
+    return np.minimum(m_left, m_right)
 
+def maximum(m_left: np.number, m_right: np.number):
+    return np.maximum(m_left, m_right)
+    
+def product(m_left: np.number, m_right: np.number):
+    return np.product(m_left, m_right)
+    
+def probsum(m_left: np.number, m_right: np.number):
+    return 1 - (1-m_left)*(1-m_right)
+    
+def lukasiewicz(m_left: np.number, m_right: np.number):
+    return np.max([0, m_left + m_right - 1])
+    
+def boundedsum(m_left: np.number, m_right: np.number):
+    return np.min([m_left + m_right, 1])
+    
+def drasticproduct(m_left: np.number, m_right: np.number):
+    return 1 if (m_left == 1 or m_right == 1) else 0
+    
+def drasticsum(m_left: np.number, m_right: np.number):
+    return  m_left if m_right == 0 else m_right if m_left == 0 else 1
     
 def weighted_average(arr: Sequence[FuzzySet], w : Sequence[np.number]):
     '''

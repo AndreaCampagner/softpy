@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.operations import ContinuousFuzzyCombination, ContinuousFuzzyOWA, DiscreteFuzzyOWA, minimum, negation
+from softpy.fuzzy.operations import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyOWA, DiscreteFuzzyCombination, DiscreteFuzzyNegation, DiscreteFuzzyOWA, minimum, negation
 from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiscreteFuzzySet, FuzzySet, GaussianFuzzySet, TriangularFuzzySet
 from tests.fuzzy_set.configuration import generate_plot, not_raises 
 
@@ -112,12 +112,12 @@ class TestNegation:
 
         if exception_expected == None:
             with not_raises() as e_info:
-                neg_fuzzy = negation(fuzzy_set)
+                neg_fuzzy = DiscreteFuzzyNegation(fuzzy_set)
                 for n, f in zip(neg_fuzzy.memberships, fuzzy_set.memberships):
                     assert n == 1 - f
         else:
             with pytest.raises(exception_expected) as e_info:
-                neg_fuzzy = negation(fuzzy_set)
+                neg_fuzzy = DiscreteFuzzyNegation(fuzzy_set)
 
     @pytest.mark.parametrize(
             "fuzzy_set,name_file,exception_expected", 
@@ -132,58 +132,77 @@ class TestNegation:
 
         if exception_expected == None:
             with not_raises() as e_info:
-                neg_fuzzy = negation(fuzzy_set)
-                generate_plot(neg_fuzzy.memberships_function, [], self.__PATH, name_file)
+                neg_fuzzy = ContinuousFuzzyNegation(fuzzy_set)
+                generate_plot(neg_fuzzy.memberships_function, 
+                              [], 
+                              self.__PATH, 
+                              name_file,
+                              {'normal': fuzzy_set.memberships_function})
         else:
             with pytest.raises(exception_expected) as e_info:
-                neg_fuzzy = negation(fuzzy_set)
+                neg_fuzzy = ContinuousFuzzyNegation(fuzzy_set)
 
 class TestTNorm:
     __PATH: str = "./plots_continuous_t_norm/"
 
     @pytest.mark.parametrize(
-            "left_fuzzy_set,right_fuzzy_set,exception_expected", 
+            "fuzzy_set,exception_expected", 
             [
-                (DiscreteFuzzySet(['a','b'], [0.5, 1]), DiscreteFuzzySet(['a','b'], [0.3, 0.2]), None),
-                ('a', DiscreteFuzzySet(['a','b'], [0.5, 1]), TypeError),
-                (DiscreteFuzzySet(['a','b'], [0.5, 1]), 'a', TypeError),
+                ([DiscreteFuzzySet(['a','b'], [0.5, 1])], None),
+                ([DiscreteFuzzySet(['a','b'], [0.5, 1]), DiscreteFuzzySet(['a','b'], [0.3, 0.2])], None),
+                ([DiscreteFuzzySet(['a','b'], [0.5, 1]), DiscreteFuzzySet(['a','b', 'c'], [0.3, 0.2, 0.7]), DiscreteFuzzySet(['a','c'], [0.8, 0.2])], None),
+                ('a', TypeError),
+                (['a'], TypeError),
             ])
     def test_discrete(self,
-                      left_fuzzy_set: DiscreteFuzzySet, 
-                      right_fuzzy_set: DiscreteFuzzySet, 
+                      fuzzy_set: list[DiscreteFuzzySet], 
                       exception_expected: Exception):
 
         if exception_expected == None:
             with not_raises() as e_info:
-                t_fuzzy = minimum(left_fuzzy_set, right_fuzzy_set)
-                common_keys = set.intersection(set(t_fuzzy.set_items.keys()),
-                                               set(left_fuzzy_set.set_items.keys()),
-                                               set(right_fuzzy_set.set_items.keys()))
+                t_fuzzy = DiscreteFuzzyCombination(fuzzy_set, minimum)
+                common_keys = set(fuzzy_set[0].set_items.keys())
+                if len(fuzzy_set) > 1:
+                    for f in fuzzy_set[1:]:
+                        common_keys = set.intersection(common_keys, f.set_items.keys())
+                
+                print(common_keys)
+                m = []
                 for k in common_keys:
-                    l = left_fuzzy_set.memberships[left_fuzzy_set.set_items[k]]
-                    r = right_fuzzy_set.memberships[right_fuzzy_set.set_items[k]]
-                    assert t_fuzzy.memberships[t_fuzzy.set_items[k]] == np.min([l,r])
+                    for f in fuzzy_set:
+                        m.append(f.memberships[f.set_items[k]]) 
+
+                    assert t_fuzzy.memberships[t_fuzzy.set_items[k]] == np.min(m)
+                    m = []
+
         else:
             with pytest.raises(exception_expected) as e_info:
-                neg_fuzzy = minimum(left_fuzzy_set, right_fuzzy_set)
+                neg_fuzzy = DiscreteFuzzyCombination(fuzzy_set, minimum)
 
     @pytest.mark.parametrize(
-            "left_fuzzy_set,right_fuzzy_set,name_file,exception_expected", 
+            "fuzzy_set,name_file,exception_expected", 
             [
-                (TriangularFuzzySet(1, 2, 3), TriangularFuzzySet(2, 3, 4), 'triangular', None),
-                ('a', TriangularFuzzySet(2, 3, 4), None, TypeError),
-                (TriangularFuzzySet(2, 3, 4), 'a', None, TypeError),
+                ([TriangularFuzzySet(1, 2, 3)], 'triangular-1', None),
+                ([TriangularFuzzySet(1, 2, 3), TriangularFuzzySet(2, 3, 4)], 'triangular-2', None),
+                ([TriangularFuzzySet(1, 2, 3), TriangularFuzzySet(2, 3, 4), TriangularFuzzySet(3, 4, 5)], 'triangular-3', None),
+                ('a', None, TypeError),
+                (['a'], None, TypeError),
             ])
     def test_continuous(self,
-                        left_fuzzy_set: ContinuousFuzzySet, 
-                        right_fuzzy_set: ContinuousFuzzySet, 
+                        fuzzy_set: list[ContinuousFuzzySet], 
                         name_file: str,
                         exception_expected: Exception):
 
         if exception_expected == None:
             with not_raises() as e_info:
-                neg_fuzzy = minimum(left_fuzzy_set, right_fuzzy_set)
-                generate_plot(neg_fuzzy.memberships_function, [], self.__PATH, name_file)
+                f = ContinuousFuzzyCombination(fuzzy_set, minimum)
+                generate_plot(f.memberships_function, 
+                              [], 
+                              self.__PATH, 
+                              name_file,
+                              {str(i): fuzzy_set[i].memberships_function for i in range(len(fuzzy_set))})
         else:
             with pytest.raises(exception_expected) as e_info:
-                neg_fuzzy = minimum(left_fuzzy_set, right_fuzzy_set)
+                f = ContinuousFuzzyCombination(fuzzy_set, minimum)
+
+                
