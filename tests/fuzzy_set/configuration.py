@@ -21,10 +21,12 @@ def generate_plot(callable: Callable,
                   params: list, 
                   path: str,
                   name: str, 
-                  additional_call: dict[str, Callable] = None):
+                  additional_call: dict[str, Callable] = None,
+                  start = 0,
+                  end = 10):
 
     print(additional_call)
-    x = np.linspace(0, 10, int(21 / 1e-2))
+    x = np.linspace(start, end, int((end - start + 1) / 1e-2))
     y = [callable(x_i, *params) for x_i in x]
     
     add_y = []

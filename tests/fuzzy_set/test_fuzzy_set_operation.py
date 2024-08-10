@@ -6,8 +6,9 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.operations import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyOWA, DiscreteFuzzyCombination, DiscreteFuzzyNegation, DiscreteFuzzyOWA, minimum, negation
-from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiscreteFuzzySet, FuzzySet, GaussianFuzzySet, TriangularFuzzySet
+from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyOWA, DiscreteFuzzyCombination, DiscreteFuzzyNegation, DiscreteFuzzyOWA
+from softpy.fuzzy.operations import minimum
+from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiscreteFuzzySet, GaussianFuzzySet, TriangularFuzzySet
 from tests.fuzzy_set.configuration import generate_plot, not_raises 
 
 class TestContinuousFuzzyOWA:
