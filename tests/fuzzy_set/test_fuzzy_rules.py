@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.fuzzy_rule import DNFRule, MamdaniRule
+from softpy.fuzzy.fuzzy_rule import DNFRule, MamdaniRule, TSKRule
 from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
 from softpy.fuzzy.fuzzyset import FuzzySet, GaussianFuzzySet, LinearSFuzzySet, LinearZFuzzySet, TrapezoidalFuzzySet, TriangularFuzzySet
 from softpy.fuzzy.operations import maximum, minimum
@@ -172,8 +172,8 @@ class TestDNFRule:
             "premises,name_conseguence,conseguence,tnorm_operation,tconorm_operation,exception_expected", 
             [
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ], 
                     'cons', 
                     TriangularFuzzySet(0, 1, 2),
@@ -192,9 +192,16 @@ class TestDNFRule:
                  minimum, 
                  maximum, 
                  ValueError),
+                ([{'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
+                  {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},], 
+                 'cons', 
+                 TriangularFuzzySet(0, 1, 2),
+                 minimum, 
+                 maximum, 
+                 TypeError),
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ],
                     'cons', 
                     'a',
@@ -202,8 +209,8 @@ class TestDNFRule:
                     maximum,
                     TypeError),
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ], 
                     'cons', 
                     TriangularFuzzySet(0, 1, 2),
@@ -211,8 +218,8 @@ class TestDNFRule:
                     maximum, 
                     TypeError),
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ], 
                     'cons', 
                     TriangularFuzzySet(0, 1, 2),
@@ -220,8 +227,8 @@ class TestDNFRule:
                     'a', 
                     TypeError),
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ], 
                     1, 
                     TriangularFuzzySet(0, 1, 2),
@@ -229,8 +236,8 @@ class TestDNFRule:
                     maximum,
                     TypeError),
                 ([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': GaussianFuzzySet(1, 1), 'temp4': GaussianFuzzySet(2, 1)},
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [GaussianFuzzySet(1, 1)], 'temp4': [GaussianFuzzySet(2, 1)]},
                     ], 
                     '', 
                     TriangularFuzzySet(0, 1, 2),
@@ -257,8 +264,8 @@ class TestDNFRule:
             "dnf_rule,input_rules,name_file", 
             [
                 (DNFRule([
-                    {'temp1': GaussianFuzzySet(0, 1), 'temp2': GaussianFuzzySet(1, 1)},
-                    {'temp3': TrapezoidalFuzzySet(1, 2, 3, 4), 'temp4': TrapezoidalFuzzySet(3, 4, 5, 6)}
+                    {'temp1': [GaussianFuzzySet(0, 1)], 'temp2': [GaussianFuzzySet(1, 1)]},
+                    {'temp3': [TrapezoidalFuzzySet(1, 2, 3, 4)], 'temp4': [TrapezoidalFuzzySet(3, 4, 5, 6)]}
                     ], 
                     'cons1',
                     TriangularFuzzySet(1, 2, 4),
@@ -284,44 +291,37 @@ class TestDNFRule:
 
         generate_plot(ris.memberships_function, [], self.__PATH, name_file, additional_call=d)
 
-'''
+
 class TestTSKRule:
-    __PATH = './plots_tsk_rule_aggregation/'
+    # __PATH = './plots_tsk_rule_aggregation/'
     
     @pytest.mark.parametrize(
-            "premises,weights,name_conseguence,conseguence,exception_expected", 
+            "premises,weights,name_conseguence,exception_expected", 
             [
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0, 0.5, 0.5], 
-                  'cons', 
-
-                  None),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0, 0.7, 0.3], 'cons', None),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.2, 0.4, 0.4], 'cons', None),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0, 0.5, 0.5], 'cons', None),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0, 0.7, 0.3], 'cons', None),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 'cons', None),
+                ({'Gaussian(0, 1)': ['a'], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 'cons', TypeError),
+                ({'Gaussian(0, 1)': [], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 'cons', ValueError),
                 ('a', [0.2, 0.4, 0.4], 'cons', TypeError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1)}, [0.2, 0.4, 0.4], 'cons', ValueError),
-                ({1: GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.2, 0.4, 0.4], 'cons', TypeError),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)]}, [0.2, 0.4, 0.4], 'cons', ValueError),
+                ({1: [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 'cons', TypeError),
                 ({'Gaussian(0, 1)': 'a', 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.2, 0.4, 0.4], 'cons', TypeError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, 'a', 'cons', TypeError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.5, 0.5], 'cons', ValueError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0, 1, 0], 'cons', None),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0, 2, 0], 'cons', ValueError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0, -2, 0], 'cons', ValueError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [-0.5, 0.5, 1], 'cons', ValueError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.2, 0.4, 0.4], '', ValueError),
-                ({'Gaussian(0, 1)': GaussianFuzzySet(0, 1), 
-                  'Gaussian(1, 1)': GaussianFuzzySet(1, 1)}, [0.2, 0.4, 0.4], 1, TypeError),
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 'cons', TypeError),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, 'a', 'cons', TypeError),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.5, 0.5], 'cons', ValueError),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], '', ValueError),
+                ({'Gaussian(0, 1)': [GaussianFuzzySet(0, 1)], 
+                  'Gaussian(1, 1)': [GaussianFuzzySet(1, 1)]}, [0.2, 0.4, 0.4], 1, TypeError),
             ])
     def test_creation(self,
                       premises : dict[FuzzySet], 
@@ -335,18 +335,18 @@ class TestTSKRule:
         else:
             with pytest.raises(exception_expected) as e_info:
                 lfs = TSKRule(premises, weights, name_conseguence)
-
     @pytest.mark.parametrize(
-            "tsk_rule,name_file", 
+            "tsk_rule,params", 
             [
-                (TSKRule({'Gaussian(0, 1)': GaussianFuzzySet(2, 1), 
-                          'Gaussian(2, 1)': GaussianFuzzySet(1, 1)}, [0, 0.5, 0.5], 'cons'), 'gaussian-trapezoidal'),
+                (TSKRule({'Gaussian(0, 1)': [GaussianFuzzySet(2, 1)], 
+                          'Gaussian(2, 1)': [GaussianFuzzySet(1, 1)]}, [0, 0.5, 0.5], 'cons'),
+                          {
+                              'Gaussian(0, 1)': 0.5,
+                              'Gaussian(2, 1)': 1.5
+                          }),
             ])
     def test_evaluate(self,
                       tsk_rule: TSKRule,
-                      name_file: str):
+                      params: dict[str, np.number]):
 
-        d = {}
-        for k, fuzzy in tsk_rule.premises.items():
-            d[k] = fuzzy.memberships_function
-        generate_plot(tsk_rule.memberships_function, [], self.__PATH, name_file, additional_call=d)'''
+        print(tsk_rule.evaluate(params))

@@ -24,8 +24,11 @@ def generate_plot(callable: Callable,
                   additional_call: dict[str, Callable] = None,
                   start = 0,
                   end = 10):
+    if abs(start) == np.inf:
+        start = 0
+    if abs(end) == np.inf:
+        end = 10
 
-    print(additional_call)
     x = np.linspace(start, end, int((end - start + 1) / 1e-2))
     y = [callable(x_i, *params) for x_i in x]
     

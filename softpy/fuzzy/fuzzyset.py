@@ -97,20 +97,22 @@ class DiscreteFuzzySet(FuzzySet):
     def dynamic(self) -> bool:
         return self.__dynamic
     
+    def memberships_function(self, x) -> np.number:
+        if x not in self.__set_items.keys():
+            if self.__dynamic:
+                self.__set_items[x] = len(self.__items)
+                self.__items = np.append(self.__items, x)
+                self.__memberships = np.append(self.__memberships, 0.0)
+            else:
+                raise ValueError("%s not in the support of the fuzzy set" % x)
+        return self.__memberships[self.__set_items[x]]
+    
     def __call__(self, arg):
         '''
         Gets the membership degree of arg. Uses self.__set_items to enable quick look-up.
         Behavior changes according to value of dynamic
         '''
-        if arg not in self.__set_items.keys():
-            if self.__dynamic:
-                self.__set_items[arg] = len(self.__items)
-                self.__items = np.append(self.__items, arg)
-                self.__memberships = np.append(self.__memberships, 0.0)
-            else:
-                raise ValueError("%s not in the support of the fuzzy set" % arg)
-             
-        return self.__memberships[self.__set_items[arg]]
+        return self.memberships_function(arg)
         
     def __getitem__(self, alpha: np.number) -> np.ndarray:
         '''
@@ -305,6 +307,11 @@ class ContinuousFuzzySet(FuzzySet):
                                          epsabs=self.epsilon)[0]
         
         return self._h
+
+class SingletonFuzzySet(DiscreteFuzzySet):
+    def __init__(self, value, memb) -> None:
+        super().__init__([value], [memb])
+
     
 class TriangularFuzzySet(ContinuousFuzzySet):
     def __init__(self, 
@@ -739,4 +746,3 @@ class PiShapedFuzzySet(ContinuousFuzzySet):
         self.__left_upper = left_upper
         self.__right_upper = right_upper
         self.__right_lower = right_lower
-
