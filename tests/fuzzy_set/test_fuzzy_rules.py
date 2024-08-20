@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.fuzzy_rule import DNFRule, MamdaniRule, TSKRule
+from softpy.fuzzy.fuzzy_rule import MamdaniRule, TSKRule
 from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
 from softpy.fuzzy.fuzzyset import FuzzySet, GaussianFuzzySet, LinearSFuzzySet, LinearZFuzzySet, TrapezoidalFuzzySet, TriangularFuzzySet
 from softpy.fuzzy.operations import maximum, minimum

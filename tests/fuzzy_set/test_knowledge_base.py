@@ -6,7 +6,7 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.fuzzy_rule import FuzzyRule, MamdaniRule,DNFRule, TSKRule
+from softpy.fuzzy.fuzzy_rule import FuzzyRule, MamdaniRule, TSKRule
 from softpy.fuzzy.knowledge_base import AggregationType, TSKKnowledgeBase, center_of_gravity, MamdaniKnowledgeBase
 from softpy.fuzzy.fuzzyset import TriangularFuzzySet, ZShapedFuzzySet, LinearZFuzzySet, GaussianFuzzySet, SShapedFuzzySet, LinearSFuzzySet
 from softpy.fuzzy.operations import maximum
@@ -105,23 +105,6 @@ class TestMamdaniKnowledgeBase:
                 maximum, 
                 'a',
                 TypeError),
-                ([
-                    DNFRule([{'service': [ZShapedFuzzySet(0, 5, bound=(0,10))],
-                             'food': [LinearZFuzzySet(2, 4, bound=(0,10))]}], 
-                             'tip',
-                             TriangularFuzzySet(0, 5, 10, bound=(0,30))),
-                    MamdaniRule({'service': [GaussianFuzzySet(5, 3, bound=(0,10))]}, 
-                                 'tip',
-                                 TriangularFuzzySet(10, 15, 20, bound=(0,30))),
-                    MamdaniRule({'service': [SShapedFuzzySet(5, 10, bound=(0,10))],
-                                 'food': [LinearSFuzzySet(6, 8, bound=(0,10))]}, 
-                                 'tip',
-                                 TriangularFuzzySet(20, 25, 30, bound=(0,30)))
-                ],
-                AggregationType.FATI,
-                maximum, 
-                center_of_gravity,
-                None)
             ])
     def test_creation(self,
                       rules_list: list[FuzzyRule],
@@ -179,23 +162,6 @@ class TestMamdaniKnowledgeBase:
                     MamdaniRule({'food': [LinearSFuzzySet(6, 8, bound=(0,10))]}, 
                                  'tip',
                                  TriangularFuzzySet(20, 25, 30, bound=(0,30)))
-                    ], aggregation_type=AggregationType.FITA),
-                    {
-                        'service': 3,
-                        'food': 2
-                    }),
-                (MamdaniKnowledgeBase([
-                    DNFRule([{'service': [ZShapedFuzzySet(0, 5, bound=(0,10))],
-                              'food': [LinearZFuzzySet(2, 4, bound=(0,10))]}], 
-                             'tip',
-                             TriangularFuzzySet(0, 5, 10, bound=(0,30))),
-                    MamdaniRule({'service': [GaussianFuzzySet(5, 3, bound=(0,10))]}, 
-                                 'tip',
-                                 TriangularFuzzySet(10, 15, 20, bound=(0,30))),
-                    DNFRule([{'service': [SShapedFuzzySet(5, 10, bound=(0,10))],
-                              'food': [LinearSFuzzySet(6, 8, bound=(0,10))]}], 
-                              'tip',
-                              TriangularFuzzySet(20, 25, 30, bound=(0,30)))
                     ], aggregation_type=AggregationType.FITA),
                     {
                         'service': 3,

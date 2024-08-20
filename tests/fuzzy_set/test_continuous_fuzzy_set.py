@@ -69,7 +69,7 @@ class TestContinuousFuzzySet:
                                        step)
                 
                 discr_memb_func = np.array([fuzzy_set.memberships_function(x) for x in  x_values])
-                alpha_cut_set = np.array([v if v >= alpha_cut else np.nan for v in discr_memb_func])
+                alpha_cut_set = np.array([v if memb >= alpha_cut else np.nan for v, memb in zip(x_values, discr_memb_func)])
                 assert np.array_equal(alpha_cut_set, fuzzy_set[alpha_cut], equal_nan=True)
         else:
             with pytest.raises(exception_expected) as e_info:
