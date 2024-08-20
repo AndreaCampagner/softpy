@@ -254,7 +254,7 @@ class ContinuousFuzzySet(FuzzySet):
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError(f"Alpha should be a float in [0,1], is {type(alpha)}")
 
-        if alpha <= 0 or alpha >= 1:
+        if alpha < 0 or alpha > 1:
             raise ValueError(f"Alpha should be a float in [0,1], is {type(alpha)}")
 
         step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
@@ -265,7 +265,7 @@ class ContinuousFuzzySet(FuzzySet):
         
         discr_memb_func = np.array([self(x) for x in  x_values])
 
-        alpha_cut = np.array([v if v >= alpha else np.nan for v in discr_memb_func])
+        alpha_cut = np.array([v if memb >= alpha else np.nan for v, memb in zip(x_values, discr_memb_func)])
 
         return alpha_cut
 
@@ -309,7 +309,7 @@ class ContinuousFuzzySet(FuzzySet):
         return self._h
 
 class SingletonFuzzySet(DiscreteFuzzySet):
-    def __init__(self, value, memb) -> None:
+    def __init__(self, value, memb: np.number = 1) -> None:
         super().__init__([value], [memb])
 
     

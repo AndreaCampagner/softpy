@@ -11,7 +11,7 @@ def maximum(m_left: np.number, m_right: np.number):
     return np.maximum(m_left, m_right)
     
 def product(m_left: np.number, m_right: np.number):
-    return np.product(m_left, m_right)
+    return m_left * m_right
     
 def probsum(m_left: np.number, m_right: np.number):
     return 1 - (1-m_left)*(1-m_right)

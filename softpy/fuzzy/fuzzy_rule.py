@@ -125,13 +125,29 @@ class MamdaniRule(FuzzyRule):
                                     [self.__tnorm_operation(combination_premises, m) for m in self.__conseguence.memberships],
                                     self.__conseguence.dynamic)
 
+    def evaluate_premises(self, params: dict[str, np.number]) -> np.number:
+        if not isinstance(params, dict):
+            raise TypeError("params should be a dict")
+
+        if list(params.keys()) != list(self.get_input_name()):
+            raise TypeError("params should have the same input of premises")
+        
+        params_list = []
+        for name, l_f in self.__premises.items():
+            params_list.extend([params[name]] * len(l_f))
+
+        ris = 1
+        for f, param in zip(self.get_premises_fuzzy_set(), params_list):
+            ris = self.__tnorm_operation(f(param), ris)
+
+        return ris        
+
+'''
 class DNFRule(FuzzyRule):
-    '''
     An implementation of a DNF fuzzy rule.
     
     Rule is in the following form:
     T(TC(F1, F2, ..., FN), TC(F'1, F'2, ..., F'M), ...)
-    '''
     def __init__(self, 
                  premises: list[dict[str, list[FuzzySet]]], 
                  name_conseguence: str,
@@ -189,12 +205,12 @@ class DNFRule(FuzzyRule):
         if isinstance(list(self.__premises[0].values())[0][0], ContinuousFuzzySet):
             self.__type_rule: TypeRule = TypeRule.Continuous
             for d in self.__premises:
-                self.__or_clausule_premises.append(ContinuousFuzzyCombination(self.__get_premises_fuzzy_set(d), 
+                self.__or_clausule_premises.append(ContinuousFuzzyCombination(self.get_premises_fuzzy_set(d), 
                                                                               self.__tconorm_operation))
         else:
             self.__type_rule: TypeRule = TypeRule.Discrete
             for d in self.__premises:
-                self.__or_clausule_premises.append(DiscreteFuzzyCombination(self.__get_premises_fuzzy_set(d),
+                self.__or_clausule_premises.append(DiscreteFuzzyCombination(self.get_premises_fuzzy_set(d),
                                                                             self.__tconorm_operation))
         if self.__type_rule == TypeRule.Continuous:
             self.__rule = ContinuousFuzzyCombination(self.__or_clausule_premises, 
@@ -225,16 +241,14 @@ class DNFRule(FuzzyRule):
             names.extend(list(d.keys()))
         return names
     
-    def __get_premises_fuzzy_set(self, d: dict[str, list[FuzzySet]]) -> list[FuzzySet]:
+    def get_premises_fuzzy_set(self, d: dict[str, list[FuzzySet]]) -> list[FuzzySet]:
         all_fuzzy_set = []
         for l in d.values():
             all_fuzzy_set.extend(l)
         return all_fuzzy_set
 
     def evaluate(self, params: dict[np.number]) -> FuzzySet:
-        '''
         It evaluates the MamdaniRule given a list of elements, ones per premise.
-        '''
         if not isinstance(params, dict):
             raise TypeError("params should be a list of list")
         
@@ -257,7 +271,31 @@ class DNFRule(FuzzyRule):
                                     [self.__tnorm_operation(combination_premises, m) for m in self.__conseguence.memberships],
                                     self.__conseguence.dynamic)
 
+    
+    def evaluate_premises(self, params: dict[str, np.number]) -> np.number:
+        if not isinstance(params, dict):
+            raise TypeError("params should be a dict")
 
+        if list(params.keys()) != list(self.get_input_name()):
+            raise TypeError("params should have the same input of premises")
+        
+        results = []
+        
+        input_params = []
+        for d in self.__premises:
+            for k, l_f in d.items():
+                input_params.extend([params[k]] * len(l_f))
+
+            results.append(1)
+            for l_f in self.get_premises_fuzzy_set(d):
+                for f, param in zip(l_f, params):
+                    results[-1] = self.__tnorm_operation(f(param), results[-1])
+        res = 0
+        for r in results:
+            res = self.__tconorm_operation(r, res)
+        return res 
+'''
+    
 class TSKRule(FuzzyRule):
     '''
     An implementation of a Takagi Sugeno Kang fuzzy rule.
@@ -277,8 +315,8 @@ class TSKRule(FuzzyRule):
         if not isinstance(premises, dict):
             raise TypeError("premises should be a dict")
         
-        if len(premises.keys()) <= 1:
-            raise ValueError("premises should have at least of almost 2 elements")       
+        if len(premises.keys()) <= 0:
+            raise ValueError("premises should have at least of almost 1 elements")       
         
         for k, v in premises.items():
             if not isinstance(k, str) and k != '':
@@ -367,7 +405,7 @@ class SingletonRule(FuzzyRule):
         if not isinstance(premises, dict):
             raise TypeError("premises should be a dict")
         
-        if len(premises.keys()) <= 1:
+        if len(premises.keys()) <= 0:
             raise ValueError("premises should have at least of almost 2 elements")       
         
         for k, v in premises.items():
@@ -424,22 +462,120 @@ class SingletonRule(FuzzyRule):
             all_fuzzy_set.extend(l)
         return all_fuzzy_set
     
-    def evaluate(self, params: dict[str, np.number]) -> FuzzySet:
+    def evaluate(self, params: dict[str, np.number]) -> tuple[np.number, np.number]:
         '''
         It evaluates the MamdaniRule given a list of elements, ones per premise.
         '''
+
         if not isinstance(params, dict):
             raise TypeError("params should be a dict")
-
-        if list(params.keys()) != list(self.get_input_name()):
-            raise TypeError("params should have the same input of premises")
+        
+        if list(params.keys()) != self.get_input_name():
+            raise ValueError("params should have the same keys of premises")
+    
+        for k in params.values():
+            if not np.issubdtype(type(k), np.number):
+                raise ValueError("every value should be a number")
         
         params_list = []
         for name, l_f in self.__premises.items():
             params_list.extend([params[name]] * len(l_f))
 
-        combination_premises = self.__rule(params_list)
+        output_rule = self.__conseguence.items[0]
+        weight = self.__rule(params_list)
 
-        return SingletonFuzzySet([self.__conseguence.items[0]], 
-                                 [self.__tnorm_operation(combination_premises,
-                                                         self.__conseguence.memberships[0])])
+        return output_rule, weight
+    
+class ClassifierRule(FuzzyRule):
+    def __init__(self, 
+                 premises : dict[str, list[FuzzySet]], 
+                 name_conseguence: str,
+                 conseguence: np.number,
+                 tnorm_operation: Callable = minimum):
+        if not isinstance(tnorm_operation, Callable):
+            raise ValueError("tnorm_operation should be a callable")
+        
+        if not isinstance(premises, dict):
+            raise TypeError("premises should be a dict")
+        
+        if len(premises.keys()) <= 0:
+            raise ValueError("premises should have at least of almost 1 element")       
+        
+        for k, v in premises.items():
+            if not isinstance(k, str) and k != '':
+                raise TypeError("All keys should be a not empty string") 
+            if not isinstance(v, list):
+                raise TypeError('All values should be a list')  
+            if len(v) == 0:
+                raise ValueError('All values should be a non empty list')  
+            for f in v:
+                if not isinstance(f, FuzzySet):
+                    raise TypeError('All values should be a list of fuzzy sets')
+                
+        if not isinstance(name_conseguence, str):
+            raise TypeError("name_conseguence should be a not empty string")
+        
+        if name_conseguence == '':
+            raise ValueError("name_conseguence should be a not empty string")
+        
+        if not np.issubdtype(type(conseguence), np.number):
+            raise TypeError("v should be a class")
+
+        if not isinstance(tnorm_operation, Callable):
+            raise TypeError("tnorm_operation should be a tnorm fuzzy operation")  
+        
+        self.__premises: dict[str, list[FuzzySet]] = premises
+        self.__name_conseguence: str = name_conseguence
+        self.__conseguence: np.number = conseguence
+        self.__tnorm_operation: Callable = tnorm_operation
+
+        
+        if isinstance(self.get_premises_fuzzy_set()[0], ContinuousFuzzySet):
+            self.__rule: ContinuousFuzzyCombination = ContinuousFuzzyCombination(self.get_premises_fuzzy_set(), self.__tnorm_operation) 
+            self.__type_rule: TypeRule = TypeRule.Continuous
+        else:
+            self.__rule: DiscreteFuzzyCombination = DiscreteFuzzyCombination(self.get_premises_fuzzy_set(), self.__tnorm_operation) 
+            self.__type_rule: TypeRule = TypeRule.Discrete
+
+    @property
+    def premises(self) -> dict[str, FuzzySet]:
+        return self.__premises
+    
+    @property
+    def name_conseguence(self) -> str:
+        return self.__name_conseguence
+    
+    def get_input_name(self) -> list[str]:
+        names: list[str] = list(self.__premises.keys())
+        return names
+
+    def get_premises_fuzzy_set(self) -> list[FuzzySet]:
+        all_fuzzy_set = []
+        for l in self.__premises.values():
+            all_fuzzy_set.extend(l)
+        return all_fuzzy_set
+    
+
+    def evaluate(self, params: dict[str, np.number]) -> tuple[str, np.number]:
+        '''
+        It evaluates the MamdaniRule given a list of elements, ones per premise.
+        '''
+
+        if not isinstance(params, dict):
+            raise TypeError("params should be a dict")
+        
+        if list(params.keys()) != self.get_input_name():
+            raise ValueError("params should have the same keys of premises")
+    
+        for k in params.values():
+            if not np.issubdtype(type(k), np.number):
+                raise ValueError("every value should be a number")
+        
+        params_list = []
+        for name, l_f in self.__premises.items():
+            params_list.extend([params[name]] * len(l_f))
+
+        output_rule = self.__conseguence
+        weight = self.__rule(params_list)
+
+        return output_rule, weight
