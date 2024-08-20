@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Callable
 import numpy as np
 
-from softpy.fuzzy.fuzzy_rule import ClassifierRule, DNFRule, MamdaniRule, SingletonRule, TSKRule
+from softpy.fuzzy.fuzzy_rule import ClassifierRule, MamdaniRule, SingletonRule, TSKRule
 from softpy.fuzzy.operations import maximum, minimum
 from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
 from .fuzzyset import FuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
@@ -42,18 +42,18 @@ class KnowledgeBaseABC(ABC):
 
 class MamdaniKnowledgeBase(KnowledgeBaseABC):
     def __init__(self, 
-                 rules: list[MamdaniRule | DNFRule],    
+                 rules: list[MamdaniRule],    
                  aggregation_type: AggregationType = AggregationType.FATI,
                  tconorm_aggregation: Callable = maximum, 
                  defuzzification_function: Callable = center_of_gravity):
         if not isinstance(rules, list):
             raise TypeError("rules should be a list")
         
-        self.__rules: dict[str, list[MamdaniRule | DNFRule]] = {}
+        self.__rules: dict[str, list[MamdaniRule]] = {}
         
         for r in rules:
-            if not isinstance(r, MamdaniRule) and not isinstance(r, DNFRule):
-                raise TypeError("All rules should be MamdaniRule or DNFRule")
+            if not isinstance(r, MamdaniRule):
+                raise TypeError("All rules should be MamdaniRule")
             if r.name_conseguence in self.__rules.keys():
                 self.__rules[r.name_conseguence].append(r)
             else:
