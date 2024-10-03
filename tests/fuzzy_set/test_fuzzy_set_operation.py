@@ -99,7 +99,7 @@ class TestDiscreteFuzzyOWA:
                 lfs = owa(arg)
 
 class TestNegation:
-    __PATH: str = "./plots_continuous_negation/"
+    __PATH: str = "./img/plots_continuous_negation/"
 
     @pytest.mark.parametrize(
             "fuzzy_set,exception_expected", 
@@ -144,7 +144,7 @@ class TestNegation:
                 neg_fuzzy = ContinuousFuzzyNegation(fuzzy_set)
 
 class TestTNorm:
-    __PATH: str = "./plots_continuous_t_norm/"
+    __PATH: str = "./img/plots_continuous_t_norm/"
 
     @pytest.mark.parametrize(
             "fuzzy_set,exception_expected", 

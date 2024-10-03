@@ -25,6 +25,11 @@ class FuzzySet(ABC):
     def hartley(self) -> np.number:
         pass
 
+    @abstractmethod
+    def memberships_function(self, x) -> np.number:
+        pass
+
+"""
 class LambdaFuzzySet(FuzzySet):
     '''Abstract Class for a fuzzy set defined by an explicitly specified membership function'''
     def __init__(self, func : function):
@@ -42,6 +47,7 @@ class LambdaFuzzySet(FuzzySet):
     def hartley(self):
         pass
 
+"""
 
 class DiscreteFuzzySet(FuzzySet):
     '''
@@ -221,7 +227,10 @@ class ContinuousFuzzySet(FuzzySet):
         #self.hartley()
 
     
-    def memberships_function(self, x: np.number) -> np.number:
+    def memberships_function(self, x) -> np.number:
+        if not np.issubdtype(type(x), np.number):
+            raise TypeError("x should be a number")
+        
         member = self.__memberships_function(x)
         
         if self.bound[0] <= x <= self.bound[1]:
@@ -291,20 +300,10 @@ class ContinuousFuzzySet(FuzzySet):
 
         if self._h == -1:
             
-            step = int((self.bound[1] - self.bound[0] + 1)/self.epsilon)
-            
-            x_values = np.linspace(self.bound[0], 
-                                self.bound[1], 
-                                step)
-            
-            discr_memb_func = np.array([self(x) for x in  x_values])
-
-            height = np.max(discr_memb_func)
-
-            self._h = sp.integrate.quad(lambda alpha: np.log2(np.count_nonzero(np.isnan(self[alpha]))), 
-                                         0, 
-                                         height, 
-                                         epsabs=self.epsilon)[0]
+            self._h =  np.log2(sp.integrate.quad(lambda x: self.memberships_function(x), 
+                                         self.bound[0], 
+                                         self.bound[1], 
+                                         epsabs=self.epsilon))[0]
         
         return self._h
 

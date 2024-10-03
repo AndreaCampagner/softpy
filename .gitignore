@@ -4,3 +4,4 @@ slides/*
 softpy.egg-info/*
 dist/*
 .venv/
+img/

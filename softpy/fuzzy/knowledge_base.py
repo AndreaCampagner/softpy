@@ -249,7 +249,7 @@ class SingletonKnowledgeBase(KnowledgeBaseABC):
 
         return output
     
-class ClassfierKnowledgeBase(KnowledgeBaseABC):
+class ClassifierKnowledgeBase(KnowledgeBaseABC):
     def __init__(self,
                  rules: list[ClassifierRule]):
         

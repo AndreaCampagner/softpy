@@ -14,12 +14,12 @@ def non_linear_scaling(x, alpha = 2):
     sign = partial(math.copysign, 1)
     return sign(x) * abs(x) ** alpha
 
-class FuzzyControlSystemABC(ABC):
+class ControlSystemABC(ABC):
     @abstractmethod
     def evaluate(self, params: dict[str, np.number]):
         pass
 
-class ControlSystem(FuzzyControlSystemABC):
+class FuzzyControlSystem(ControlSystemABC):
 
     def __init__(self, 
                  kb: KnowledgeBaseABC,

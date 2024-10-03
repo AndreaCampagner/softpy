@@ -120,7 +120,7 @@ class MamdaniRule(FuzzyRule):
             return ContinuousFuzzySet(lambda x: self.__tnorm_operation(combination_premises, 
                                                                        self.__conseguence(x)),
                                       self.__conseguence.bound)
-        if self.__type_rule == TypeRule.Continuous:
+        if self.__type_rule == TypeRule.Discrete:
             return DiscreteFuzzySet(self.__conseguence.items,
                                     [self.__tnorm_operation(combination_premises, m) for m in self.__conseguence.memberships],
                                     self.__conseguence.dynamic)
@@ -184,8 +184,9 @@ class TSKRule(FuzzyRule):
             raise ValueError("name_conseguence should be a non empty string")
         
         self.__premises = premises
+        self.__tnorm_operation = tnorm_operation
         self.__fuzzy_composition = ContinuousFuzzyCombination(self.get_premises_fuzzy_set(), 
-                                                              minimum)
+                                                              self.__tnorm_operation)
 
         if not isinstance(weights, list):
             raise TypeError("weights should be a list")

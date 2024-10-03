@@ -5,15 +5,16 @@ import numpy as np
 from softpy.fuzzy.fuzzyset import DiscreteFuzzySet, ContinuousFuzzySet, FuzzySet
 from softpy.fuzzy.operations import negation
 
-class ContinuousFuzzyOWA(ContinuousFuzzySet):
+class ContinuousFuzzyWA(ContinuousFuzzySet):
     '''
-    Support class to implement the OWA operation between ContinuousFuzzySet instances.
+    Support class to implement the WA operation between ContinuousFuzzySet instances.
     Notice: the result of OWA on ContinuousFuzzySet instances is a ContinuousFuzzySet
     '''
 
     def __init__(self, 
-                 fuzzysets: list[ContinuousFuzzySet] | np.ndarray | tuple[np.number], 
-                 weights: list[np.number] | np.ndarray | tuple[np.number]):
+                 fuzzysets: list[ContinuousFuzzySet] | np.ndarray | tuple[ContinuousFuzzySet], 
+                 weights: list[np.number] | np.ndarray | tuple[np.number],
+                 order: bool = False):
         '''
         The constructor searches the given fuzzysets in order to determine the minimum and maximum of the result of OWA
         '''
@@ -32,21 +33,51 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
         
         if sum(weights) != 1:
             raise ValueError("sum of weights should be 1")
-
-        self.__bound = [np.inf, -np.inf]
         
+        bound = [np.inf, -np.inf]
         for i in range(len(fuzzysets)):
             if not np.issubdtype(type(weights[i]), np.number) or weights[i] < 0 or weights[i] > 1:
                 raise TypeError("w should be a sequence of floats in [0,1]")
             if not isinstance(fuzzysets[i], ContinuousFuzzySet):
                 raise TypeError("Arguments should be all continuous fuzzy sets")
-            if fuzzysets[i].bound[0] < self.__bound[0]:
-                self.__bound[0] = fuzzysets[i].bound[0]
-            if fuzzysets[i].bound[1] > self.__bound[1]:
-                self.__bound[1] = fuzzysets[i].bound[1]
+            if fuzzysets[i].bound[0] < bound[0]:
+                bound[0] = fuzzysets[i].bound[0]
+            if fuzzysets[i].bound[1] > bound[1]:
+                bound[1] = fuzzysets[i].bound[1]
             
+        if not isinstance(order, bool):
+            raise TypeError("order should be a bool")
+        
+        super().__init__(memberships_function=self.__memb_func, bound=tuple(bound))
+        
         self.__fuzzysets = np.array(fuzzysets)
         self.__weights = np.array(weights)
+        self.__order = order
+
+    def __memb_func(self, arg):
+        if (not isinstance(arg, list) and 
+            not isinstance(arg, tuple) and 
+            not isinstance(arg, np.ndarray) and 
+            not np.issubdtype(type(arg), np.number)):
+            raise TypeError("arg should be a list | tuple | ndarray | number")
+        
+        if ((isinstance(arg, list) or 
+             isinstance(arg, tuple) or 
+             isinstance(arg, np.ndarray)) and len(arg) != len(self.__fuzzysets)):
+            raise ValueError("arg should have equal length with fuzzysets")
+
+        if np.issubdtype(type(arg), np.number):
+            if self.__order:
+                ms = np.sort([self.__fuzzysets[i](arg) for i in range(len(self.__fuzzysets))])
+            else:
+                ms = [self.__fuzzysets[i](arg) for i in range(len(self.__fuzzysets))]
+            return np.sum(ms*self.__weights)
+
+        if self.__order:
+            ms = np.sort([self.__fuzzysets[i](arg[i]) for i in range(len(self.__fuzzysets))])
+        else:
+            ms = [self.__fuzzysets[i](arg[i]) for i in range(len(self.__fuzzysets))]
+        return np.sum(ms*self.__weights)  
 
     def __call__(self, arg: np.number | list[np.number] | tuple[np.number] | np.ndarray):
         '''
@@ -64,25 +95,26 @@ class ContinuousFuzzyOWA(ContinuousFuzzySet):
             raise ValueError("arg should have equal length with fuzzysets")
 
         if np.issubdtype(type(arg), np.number):
-            ms = np.sort([self.__fuzzysets[i](arg) for i in range(len(self.__fuzzysets))])
+            if self.__order:
+                ms = np.sort([self.__fuzzysets[i](arg) for i in range(len(self.__fuzzysets))])
+            else:
+                ms = [self.__fuzzysets[i](arg) for i in range(len(self.__fuzzysets))]
             return np.sum(ms*self.__weights)
 
-        ms = np.sort([self.__fuzzysets[i](arg[i]) for i in range(len(self.__fuzzysets))])
+        if self.__order:
+            ms = np.sort([self.__fuzzysets[i](arg[i]) for i in range(len(self.__fuzzysets))])
+        else:
+            ms = [self.__fuzzysets[i](arg[i]) for i in range(len(self.__fuzzysets))]
         return np.sum(ms*self.__weights)  
 
-
-class DiscreteFuzzyOWA(DiscreteFuzzySet):
+class DiscreteFuzzyWA(DiscreteFuzzySet):
     '''
-    Support class to implement the OWA operation between DiscreteFuzzySet instances.
-    The OWA operator is actually implemented in the constructor, that builds a new DiscreteFuzzySet
-    by computing the appropriate values of the membership degrees. All other methods directly rely on
-    the base implementation of DiscreteFuzzySet.
-    Notice: the result of OWA on DiscreteFuzzySet instances is a DiscreteFuzzySet
-    '''
-
+    Support class to implement the WA operation between DiscreteFuzzySet instances.
+   '''
     def __init__(self, 
-                 fuzzysets: list[DiscreteFuzzySet] | np.ndarray | tuple[np.number], 
+                 fuzzysets: list[DiscreteFuzzySet] | np.ndarray | tuple[DiscreteFuzzySet], 
                  weights: list[np.number] | np.ndarray | tuple[np.number], 
+                 order: bool = True,
                  dynamic: bool = True):
         if (not isinstance(fuzzysets, list) and 
             not isinstance(fuzzysets, np.ndarray) and 
@@ -105,7 +137,7 @@ class DiscreteFuzzyOWA(DiscreteFuzzySet):
                 raise TypeError("w should be a sequence of floats in [0,1]")
             if not isinstance(fuzzysets[i], DiscreteFuzzySet):
                 raise TypeError("Arguments should be all discrete fuzzy sets")
-            
+        
         self.__fuzzysets: list[DiscreteFuzzySet] = np.array(fuzzysets)
         self.__weights: list[np.number] = np.array(weights)
 
@@ -120,7 +152,10 @@ class DiscreteFuzzyOWA(DiscreteFuzzySet):
 
         take = lambda arr, i: arr[i] if 0 <= i < len(arr) else 0
         for e in set_items.keys():
-            ms = np.sort([take(f.memberships, f.set_items.get(e, -1)) for f in self.__fuzzysets])
+            if order:
+                ms = np.sort([take(f.memberships, f.set_items.get(e, -1)) for f in self.__fuzzysets])
+            else:
+                ms = [take(f.memberships, f.set_items.get(e, -1)) for f in self.__fuzzysets]
             memberships[set_items[e]] = np.sum(ms*self.__weights)
         
         super().__init__(items, memberships, dynamic)
@@ -245,14 +280,13 @@ class DiscreteFuzzyNegation(DiscreteFuzzySet):
                          [self.__op(m) for m in fuzzy.memberships], 
                          fuzzy.dynamic)
         
+'''
 
 def weighted_average(arr: Sequence[FuzzySet], w : Sequence[np.number]):
-    '''
     This implementation heavily relies on the fact that the weighted average is an associative operator. Indeed,
     w_1*v_1 + w_2*v_2 + ... + w_n*v_n = w_1*v1 + 1*(w_2*v2 + 1*(... + w_n*v_n))
     Could be implemented in a simpler way by simply allowing FuzzyCombination to take an array (rather than a pair) of
     arguments
-    '''
 
     if not isinstance(arr, list) and not isinstance(arr, np.ndarray) and not isinstance(arr, tuple):
         raise TypeError("arr should be a sequence")
@@ -303,4 +337,5 @@ def owa(arr, w):
 
 
 
+'''
  
