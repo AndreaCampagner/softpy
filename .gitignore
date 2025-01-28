@@ -5,3 +5,6 @@ softpy.egg-info/*
 dist/*
 .venv/
 img/
+.token
+install_script.txt
+setup.py
