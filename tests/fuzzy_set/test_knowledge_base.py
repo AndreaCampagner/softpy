@@ -13,7 +13,7 @@ from softpy.fuzzy.operations import maximum
 from tests.fuzzy_set.configuration import generate_plot, not_raises 
 
 class TestMamdaniKnowledgeBase:
-    __PATH = 'plots_knowledge_base_aggregation/'
+    __PATH = './'
 
     @pytest.mark.parametrize(
             "rules_list,aggregation_type,tconorm_aggregation,defuzzification_function,exception_expected", 

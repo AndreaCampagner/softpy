@@ -6,12 +6,12 @@ import pytest
 
 sys.path.append(__file__ + "/../..")
 
-from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyOWA, DiscreteFuzzyCombination, DiscreteFuzzyNegation, DiscreteFuzzyOWA
+from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, ContinuousFuzzyNegation, ContinuousFuzzyWA, DiscreteFuzzyCombination, DiscreteFuzzyNegation, DiscreteFuzzyWA
 from softpy.fuzzy.operations import minimum
 from softpy.fuzzy.fuzzyset import ContinuousFuzzySet, DiscreteFuzzySet, GaussianFuzzySet, TriangularFuzzySet
 from tests.fuzzy_set.configuration import generate_plot, not_raises 
 
-class TestContinuousFuzzyOWA:
+class TestContinuousFuzzyWA:
     @pytest.mark.parametrize(
             "fuzzysets,weights,exception_expected", 
             [
@@ -29,23 +29,23 @@ class TestContinuousFuzzyOWA:
 
         if exception_expected == None:
             with not_raises() as e_info:
-                lfs = ContinuousFuzzyOWA(fuzzysets, weights)
+                lfs = ContinuousFuzzyWA(fuzzysets, weights)
         else:
             with pytest.raises(exception_expected) as e_info:
-                lfs = ContinuousFuzzyOWA(fuzzysets, weights)
+                lfs = ContinuousFuzzyWA(fuzzysets, weights)
 
     @pytest.mark.parametrize(
             "owa,arg,exception_expected", 
             [
-                (ContinuousFuzzyOWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
+                (ContinuousFuzzyWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
                                     [0.5, 0.5]), 0.5, None),
-                (ContinuousFuzzyOWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
+                (ContinuousFuzzyWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
                                     [0.5, 0.5]), [0.5, 1], None),
-                (ContinuousFuzzyOWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
+                (ContinuousFuzzyWA([GaussianFuzzySet(0, 1), GaussianFuzzySet(2, 3)],
                                     [0.5, 0.5]), [0.5], ValueError),
             ])
     def test_memberships(self,
-                         owa: ContinuousFuzzyOWA, 
+                         owa: ContinuousFuzzyWA, 
                          arg: np.number | list[np.number] | tuple[np.number] | np.ndarray,
                          exception_expected: Exception):
 
@@ -56,7 +56,7 @@ class TestContinuousFuzzyOWA:
             with pytest.raises(exception_expected) as e_info:
                 lfs = owa(arg)
 
-class TestDiscreteFuzzyOWA:
+class TestDiscreteFuzzyWA:
     @pytest.mark.parametrize(
             "fuzzysets,weights,exception_expected", 
             [
@@ -76,18 +76,18 @@ class TestDiscreteFuzzyOWA:
 
         if exception_expected == None:
             with not_raises() as e_info:
-                lfs = DiscreteFuzzyOWA(fuzzysets, weights)
+                lfs = DiscreteFuzzyWA(fuzzysets, weights)
         else:
             with pytest.raises(exception_expected) as e_info:
-                lfs = DiscreteFuzzyOWA(fuzzysets, weights)
+                lfs = DiscreteFuzzyWA(fuzzysets, weights)
     @pytest.mark.parametrize(
             "owa,arg,exception_expected", 
             [
-                (DiscreteFuzzyOWA([DiscreteFuzzySet(['a', 'b'], [0, 1]), DiscreteFuzzySet(['c', 'd'], [0, 1])], 
+                (DiscreteFuzzyWA([DiscreteFuzzySet(['a', 'b'], [0, 1]), DiscreteFuzzySet(['c', 'd'], [0, 1])], 
                                   [0.5, 0.5]), 0.5, None),
             ])
     def test_memberships(self,
-                         owa: ContinuousFuzzyOWA, 
+                         owa: ContinuousFuzzyWA, 
                          arg: np.number | list[np.number] | tuple[np.number] | np.ndarray,
                          exception_expected: Exception):
 
@@ -99,7 +99,7 @@ class TestDiscreteFuzzyOWA:
                 lfs = owa(arg)
 
 class TestNegation:
-    __PATH: str = "./img/plots_continuous_negation/"
+    __PATH: str = "./"
 
     @pytest.mark.parametrize(
             "fuzzy_set,exception_expected", 
@@ -144,7 +144,7 @@ class TestNegation:
                 neg_fuzzy = ContinuousFuzzyNegation(fuzzy_set)
 
 class TestTNorm:
-    __PATH: str = "./img/plots_continuous_t_norm/"
+    __PATH: str = "./"
 
     @pytest.mark.parametrize(
             "fuzzy_set,exception_expected", 

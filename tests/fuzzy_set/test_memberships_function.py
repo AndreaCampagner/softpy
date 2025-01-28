@@ -13,7 +13,7 @@ import softpy.fuzzy.memberships_function as mf
 
 
 class TestMembershipFunction:
-    __PATH: str = "./plots_memberships/"
+    __PATH: str = "./"
 
     @pytest.mark.parametrize(
             "name,memberships,args", 

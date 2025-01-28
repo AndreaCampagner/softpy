@@ -14,7 +14,7 @@ from tests.fuzzy_set.configuration import not_raises, generate_plot
 
 class TestMandamiRule:
 
-    __PATH = './plots_mamdani_rule_aggregation/'
+    __PATH = './'
 
     @pytest.mark.parametrize(
             "premises,name_conseguence,conseguence,tnorm_operation,exception_expected", 
