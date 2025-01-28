@@ -2,8 +2,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Callable
 import numpy as np
-from softpy.fuzzy.fuzzyset import DiscreteFuzzySet, ContinuousFuzzySet, FuzzySet
-from softpy.fuzzy.operations import negation
+from .fuzzyset import DiscreteFuzzySet, ContinuousFuzzySet
+from .operations import negation
 
 class ContinuousFuzzyWA(ContinuousFuzzySet):
     '''
@@ -120,12 +120,27 @@ class ContinuousFuzzyWA(ContinuousFuzzySet):
 
 class DiscreteFuzzyWA(DiscreteFuzzySet):
     '''
-    Support class to implement the WA operation between DiscreteFuzzySet instances.
-   '''
+    Support class to implement the weighted average (WA) and order-weighted average (OWA) operations between DiscreteFuzzySet instances.
+    Notice: the result of WA and OWA on DiscreteFuzzySet instances is a DiscreteFuzzySet
+
+    Parameters
+    ----------
+    :param fuzzysets: a sequence of fuzzy sets
+    :type fuzzysets: list[DiscreteFuzzySet] | np.ndarray | tuple[DiscreteFuzzySet]
+
+    :param weights: a sequence of weights
+    :type weights: list[DiscreteFuzzySet] | np.ndarray | tuple[DiscreteFuzzySet]
+
+    :param order: If True, compute the OWA, otherwise compute the WA
+    :type order: bool, default=False
+
+    :param dynamic: Used to set the dynamic parameter of the output DiscreteFuzzySet
+    :type dynamic: bool, default=True
+    '''
     def __init__(self, 
                  fuzzysets: list[DiscreteFuzzySet] | np.ndarray | tuple[DiscreteFuzzySet], 
                  weights: list[np.number] | np.ndarray | tuple[np.number], 
-                 order: bool = True,
+                 order: bool = False,
                  dynamic: bool = True):
         if (not isinstance(fuzzysets, list) and 
             not isinstance(fuzzysets, np.ndarray) and 
@@ -174,11 +189,19 @@ class DiscreteFuzzyWA(DiscreteFuzzySet):
 
 class ContinuousFuzzyCombination(ContinuousFuzzySet):
     '''
-    Implements a binary operator on ContinuousFuzzySet instances
+    Support class to implement a generic associative operation between ContinuousFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy_sets: a sequence of fuzzy sets
+    :type fuzzy_sets: list[ContinuousFuzzySet] | np.ndarray | tuple[ContinuousFuzzySet]
+
+    :param op: a callable object implementing the operation to be applied
+    :type op: Callable[[np.number,np.number],np.number]
     '''
     def __init__(self, 
                  fuzzy_sets: list[ContinuousFuzzySet], 
-                 op: Callable):
+                 op: Callable[[np.number,np.number],np.number]):
         if not isinstance(fuzzy_sets, list):
             raise TypeError("fuzzy_sets should be a list")   
     
@@ -229,11 +252,19 @@ class ContinuousFuzzyCombination(ContinuousFuzzySet):
 
 class DiscreteFuzzyCombination(DiscreteFuzzySet):
     '''
-    Implements a binary operator on DiscreteFuzzySet instances
+    Support class to implement a generic associative operation between DiscreteFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy_sets: a sequence of fuzzy sets
+    :type fuzzy_sets: list[DiscreteFuzzySet] | np.ndarray | tuple[CDiscreteFuzzySet]
+
+    :param op: a callable object implementing the operation to be applied
+    :type op: Callable[[np.number,np.number],np.number]
     '''
     def __init__(self, 
                  fuzzy_sets: list[DiscreteFuzzySet], 
-                 op: Callable,
+                 op: Callable[[np.number,np.number],np.number],
                  dynamic: bool = True):
         if not isinstance(fuzzy_sets, list):
             raise TypeError("fuzzy_sets should be a list")   
@@ -264,9 +295,35 @@ class DiscreteFuzzyCombination(DiscreteFuzzySet):
             
         super().__init__(items, memberships, dynamic)
 
-class ContinuousFuzzyNegation(ContinuousFuzzySet):
+class ContinuousFuzzyGenericNegation(ContinuousFuzzySet):
     '''
-    Implements a unary operator on ContinuousFuzzySet instances
+    Support class to implement a generic unary operator (negation) on ContinuousFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy: a continuous sets
+    :type fuzzy: ContinuousFuzzySet
+
+    :param op: a callable object implementing the operation to be applied
+    :type op: Callable[[np.number],np.number]
+    '''
+    def __init__(self, fuzzy: ContinuousFuzzySet, op: Callable[[np.number],np.number]):
+        if not isinstance(fuzzy, ContinuousFuzzySet):
+            raise TypeError("Argument should be continuous fuzzy set")
+            
+        self.__fuzzy = fuzzy
+        self.__op = op
+        super().__init__(lambda x: self.__op(self.__fuzzy(x)), 
+                         (-np.inf, np.inf))
+
+class ContinuousFuzzyNegation(ContinuousFuzzyGenericNegation):
+    '''
+    Support class that implements the involutive negation on ContinuousFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy: a continuous fuzzy set
+    :type fuzzy: ContinuousFuzzySet
     '''
     def __init__(self, fuzzy: ContinuousFuzzySet):
         if not isinstance(fuzzy, ContinuousFuzzySet):
@@ -274,12 +331,38 @@ class ContinuousFuzzyNegation(ContinuousFuzzySet):
             
         self.__fuzzy = fuzzy
         self.__op = negation
-        super().__init__(lambda x: self.__op(self.__fuzzy(x)), 
-                         (-np.inf, np.inf))
+        super().__init__(self.__fuzzy, self.__op)
 
-class DiscreteFuzzyNegation(DiscreteFuzzySet):
+class DiscreteFuzzyGenericNegation(DiscreteFuzzySet):
     '''
-    Implements a unary operator on ContinuousFuzzySet instances
+    Support class to implement a generic unary operator (negation) on DiscreteFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy: a discrete fuzzy seet
+    :type fuzzy: DiscreteFuzzySet
+
+    :param op: a callable object implementing the operation to be applied
+    :type op: Callable[[np.number],np.number]
+    '''
+    def __init__(self, fuzzy: DiscreteFuzzySet, op: Callable[[np.number],np.number]):
+        if not isinstance(fuzzy, DiscreteFuzzySet):
+            raise TypeError("Argument should be discrete fuzzy set")
+            
+        self.__fuzzy = fuzzy
+        self.__op = op
+        super().__init__(fuzzy.items,
+                         [self.__op(m) for m in fuzzy.memberships], 
+                         fuzzy.dynamic)
+        
+class DiscreteFuzzyNegation(DiscreteFuzzyGenericNegation):
+    '''
+    Support class that implements the involutive negation on DiscreteFuzzySet instances.
+
+    Parameters
+    ----------
+    :param fuzzy: a discrete fuzzy set
+    :type fuzzy: DiscreteFuzzySet
     '''
     def __init__(self, fuzzy: DiscreteFuzzySet):
         if not isinstance(fuzzy, DiscreteFuzzySet):
@@ -287,10 +370,8 @@ class DiscreteFuzzyNegation(DiscreteFuzzySet):
             
         self.__fuzzy = fuzzy
         self.__op = negation
-        super().__init__(fuzzy.items,
-                         [self.__op(m) for m in fuzzy.memberships], 
-                         fuzzy.dynamic)
-        
+        super().__init__(fuzzy,self.__op)
+            
 '''
 
 def weighted_average(arr: Sequence[FuzzySet], w : Sequence[np.number]):
