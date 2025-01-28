@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
    name='softpy',
-   version='0.0.5',
+   version='0.1.2',
    author='Andrea Campagner',
    python_requires=">3.8.0",
    author_email='onyris93@gmail.com',
@@ -15,6 +15,8 @@ setup(
    install_requires=[
        "numpy>=1.24.0",
        "scipy>=1.11.0",
-
+       "dill>=0.3.9",
+       "joblib>=1.4.2",
+       "scikit-learn>=1.5.1"
    ],
 )
