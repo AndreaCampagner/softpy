@@ -1,6 +1,6 @@
 import numpy as np
 
-def tournament_selection(fitness: np.ndarray, tournament_size: int, current_step=None):
+def tournament_selection(fitness: np.ndarray, tournament_size: int=2, current_step=None):
     '''
     An implementation of tournament selection
     '''
