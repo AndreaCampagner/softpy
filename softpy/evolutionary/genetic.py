@@ -148,12 +148,12 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
         self.fitness = [None] * self.population.shape[0]
         self.best = None
-        self.fitness_best = np.NINF
+        self.fitness_best = -np.inf
 
         if keep_history:
             self.best_h = np.empty(n_iters+1, dtype=self.candidate_type)
             self.fitness_h = np.zeros(n_iters+1)
-            self.fitness_h[:] = np.NINF
+            self.fitness_h[:] = -np.inf
 
         elab_tot = int(self.pop_size-self.n_elite)/2
         elab_thread = divide_number(elab_tot, n_jobs)
@@ -274,12 +274,12 @@ class SteadyStateGeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
         self.fitness = [None] * self.population.shape[0]
         self.best = None
-        self.fitness_best = np.NINF
+        self.fitness_best = -np.inf
 
         if keep_history:
             self.best_h = np.empty(n_iters+1, dtype=self.candidate_type)
             self.fitness_h = np.zeros(n_iters+1)
-            self.fitness_h[:] = np.NINF
+            self.fitness_h[:] = -np.inf
 
         self.fitness = np.vectorize(self.fitness_func)(self.population)
         v = np.max(self.fitness)

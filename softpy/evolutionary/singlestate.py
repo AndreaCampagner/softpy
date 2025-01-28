@@ -63,11 +63,11 @@ class RandomSearch(MetaHeuristicsAlgorithm):
             raise ValueError("n_iters must be larger than 0, was %d" % n_iters)
         self.is_fitted = False
         self.best = None
-        self.fitness_best = np.NINF
+        self.fitness_best = -np.inf
 
         if keep_history:
             self.best_h = np.empty(n_iters, dtype=self.candidate_type)
-            self.fitness_h = [np.NINF]*n_iters
+            self.fitness_h = [-np.inf]*n_iters
 
 
         for it in range(n_iters):
@@ -131,7 +131,7 @@ class HillClimbing(MetaHeuristicsAlgorithm):
         if keep_history:
             self.best_h = np.empty(n_iters, dtype=self.candidate_type)
             self.best_h[0] = self.best
-            self.fitness_h = [np.NINF]*n_iters
+            self.fitness_h = [-np.inf]*n_iters
             self.fitness_h[0] = self.fitness_best
 
         for it in range(n_iters-1):
