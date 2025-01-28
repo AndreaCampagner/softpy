@@ -7,8 +7,19 @@ from softpy.fuzzy.operations import negation
 
 class ContinuousFuzzyWA(ContinuousFuzzySet):
     '''
-    Support class to implement the WA operation between ContinuousFuzzySet instances.
-    Notice: the result of OWA on ContinuousFuzzySet instances is a ContinuousFuzzySet
+    Support class to implement the weighted average (WA) and order-weighted average (OWA) operations between ContinuousFuzzySet instances.
+    Notice: the result of WA and OWA on ContinuousFuzzySet instances is a ContinuousFuzzySet
+
+    Parameters
+    ----------
+    :param fuzzysets: a sequence of fuzzy sets
+    :type fuzzysets: list[ContinuousFuzzySet] | np.ndarray | tuple[ContinuousFuzzySet]
+
+    :param weights: a sequence of weights
+    :type weights: list[np.number] | np.ndarray | tuple[np.number]
+
+    :param order: If True, compute the OWA, otherwise compute the WA
+    :type order: bool, default=False
     '''
 
     def __init__(self, 
