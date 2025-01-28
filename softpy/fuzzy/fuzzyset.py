@@ -11,18 +11,30 @@ class FuzzySet(ABC):
     '''Abstract Class for a generic fuzzy set'''
     @abstractmethod
     def __call__(self, arg) -> np.number:
+        '''
+        Gets the membership degree of arg
+        '''
         pass
 
     @abstractmethod
     def __getitem__(self, alpha):
+        '''
+        Gets an alpha cut
+        '''
         pass
 
     @abstractmethod
     def fuzziness(self) -> np.number:
+        '''
+        Computes the fuzziness
+        '''
         pass
 
     @abstractmethod
     def hartley(self) -> np.number:
+        '''
+        Computes the hartley entropy (non-specificity)
+        '''
         pass
 
     @abstractmethod
@@ -51,17 +63,24 @@ class LambdaFuzzySet(FuzzySet):
 
 class DiscreteFuzzySet(FuzzySet):
     '''
-    Implements a discrete fuzzy set
-    
+    Implements a discrete fuzzy set. Requires as input a sequence (list or array) of objects and a sequence (list or array) of membership degrees
+    Attribute dynamic controls whether the support set is exhaustive or not (i.e. there exist objects not in items whose membership degree is 0)
+
+    Parameters
+    -----------
+    :param items: sequence of objects
+    :type items: list|np.ndarray
+
+    :param memberships: sequence of membership degrees
+    :type items: list|np.ndarray
+
+    :param dynamic: If False, it assumes that the closed world assumption hold (items is an exhaustive enumeration of all relevant objects)
+    :type dynamic: bool, default=True
     '''
 
-    def __init__(self, items, memberships, dynamic=True):
+    def __init__(self, items: list|np.ndarray, memberships: list|np.ndarray, dynamic=True):
         '''
-        Requires as input a sequence (list or array) or objects and a sequence (list or array) of membership degrees
-        Attribute dynamic controls whether the support set is exhaustive or not (i.e. there exist objects not in items
-        whose membership degree is 0)
-
-        Internally the constructor uses a dictionary (self.__set_items) to enable fast look-up of membership degrees
+        
         '''
         if type(items) != list and type(items) != np.ndarray:
             raise TypeError("items should be list or numpy.array")
@@ -121,9 +140,6 @@ class DiscreteFuzzySet(FuzzySet):
         return self.memberships_function(arg)
         
     def __getitem__(self, alpha: np.number) -> np.ndarray:
-        '''
-        Gets an alpha cut
-        '''
         if not np.issubdtype(type(alpha), np.number):
             raise TypeError("Alpha should be a float in [0,1], is %s" % type(alpha))
         
@@ -154,9 +170,6 @@ class DiscreteFuzzySet(FuzzySet):
         return  True
     
     def fuzziness(self) -> np.number:
-        '''
-        Computes the fuzziness
-        '''
         try:
             return self.f
         except AttributeError:
@@ -168,9 +181,6 @@ class DiscreteFuzzySet(FuzzySet):
             return self.f
         
     def hartley(self) -> np.number:
-        '''
-        Computes the hartley entropy (non-specificity)
-        '''
         try:
             return self.h
         except AttributeError:
@@ -184,18 +194,23 @@ class DiscreteFuzzySet(FuzzySet):
 
 class ContinuousFuzzySet(FuzzySet):
     '''
-    Class for a generic unbounded continuous fuzzy set. If memberships function 
-    is exceed interval [0,1], every exceeded memberships will be truncated at 0 or 1.
+    Class for a generic unbounded continuous fuzzy set. If the value of memberships function 
+    exceeds interval [0,1], every exceeded memberships will be truncated at 0 or 1.
 
-    Membership function must be defined in all R set.
+    :param memberships_function: a callable object that returns for each real number its corresponding membership degree
+    :type memberships_function: Callable[[np.number], np.number]
 
-    Bound is the interval that express the support set.
+    :param bound: a tuple representing the domain of definition of memberships_function
+    :type bound: tuple[np.number, np.number], default=(-np.inf, np.inf)
+
+    :param epsilon: tolerance parameter for numerical routines, which are implemented as approximate search
+    :type epsilon: np.number, default=1e-3
     '''
 
     def __init__(self, 
                  memberships_function: Callable[[np.number], np.number], 
                  bound: tuple[np.number, np.number] = (-np.inf, np.inf),
-                 epsilon: np.number = 1e-3) -> None:
+                 epsilon: np.number = 1e-3):
         
         self.__epsilon: np.number = 1e-3
         self.__memberships_function: Callable[[np.number], np.number]
@@ -257,6 +272,11 @@ class ContinuousFuzzySet(FuzzySet):
         return self.memberships_function(arg)
 
     def __getitem__(self, alpha) -> np.ndarray:
+        '''
+        Implements a numerical approximate search for an alpha cut. Since for continuous fuzzy set is in general
+        impossible to compute the alpha cuts in closed form, the method simply checks values in a grid and returns
+        the list of all elements having membership degree larger than alpha
+        '''
         if self.bound == None:
             raise AttributeError("You should define the interval on which you want compute alpha cut")
 
@@ -308,11 +328,28 @@ class ContinuousFuzzySet(FuzzySet):
         return self._h
 
 class SingletonFuzzySet(DiscreteFuzzySet):
+    '''
+    Implements a DiscreteFuzzySet with a single element
+    '''
     def __init__(self, value, memb: np.number = 1) -> None:
         super().__init__([value], [memb])
 
     
 class TriangularFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a triangular fuzzy set
+
+    Parameters
+    ----------
+    :param left: the left tail of the triangular fuzzy set
+    :param left: np.number
+
+    :param spike: the middle point of the triangular fuzzy set
+    :type spike: np.number
+
+    :param right: the right tail of the triangular fuzzy set
+    :param right: np.number
+    '''
     def __init__(self, 
                  left: np.number,
                  spike: np.number,
@@ -344,7 +381,23 @@ class TriangularFuzzySet(ContinuousFuzzySet):
         self.__right = right
 
 class TrapezoidalFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a trapezoidal fuzzy set
 
+    Parameters
+    ----------
+    :param left_lower: the left tail of the trapezoidal fuzzy set
+    :type left_lower: np.number
+
+    :param left_upper: the upper left point of the trapezoidal fuzzy set
+    :type left_upper: np.number
+
+    :param right_upper: the upper right point of the trapezoidal fuzzy set
+    :type right_upper: np.number
+
+    :param right_lower: the right tail of the trapezoidal fuzzy set
+    :type right_lower: np.number
+    '''
     def __init__(self, 
                  left_lower: np.number,
                  left_upper: np.number,
@@ -384,7 +437,17 @@ class TrapezoidalFuzzySet(ContinuousFuzzySet):
         self.__right_lower = right_lower
         
 class LinearZFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a linear z-shaped (descending ramp) fuzzy set
 
+    Parameters
+    ----------
+    :param left_upper: the upper left tail of the triangular fuzzy set
+    :param left_upper: np.number
+
+    :param right_lower: the lower right tail of the triangular fuzzy set
+    :param right_lower: np.number
+    '''    
     def __init__(self, 
                  left_upper: np.number,
                  right_lower: np.number,
@@ -412,6 +475,17 @@ class LinearZFuzzySet(ContinuousFuzzySet):
 
 class LinearSFuzzySet(ContinuousFuzzySet):
 
+    '''
+    Implements a linear s-shaped (ascending ramp) fuzzy set
+
+    Parameters
+    ----------
+    :param left_lower: the lower left tail of the triangular fuzzy set
+    :param left_lower: np.number
+
+    :param right_upper: the upper right tail of the triangular fuzzy set
+    :param right_upper: np.number
+    '''    
     def __init__(self, 
                  left_lower: np.number,
                  right_upper: np.number,
@@ -438,7 +512,7 @@ class LinearSFuzzySet(ContinuousFuzzySet):
         self.__right_upper = right_upper
 
 class GaussianFuzzySet(ContinuousFuzzySet):
-
+  
     def __init__(self, 
                  mean: np.number,
                  std: np.number,
@@ -463,6 +537,17 @@ class GaussianFuzzySet(ContinuousFuzzySet):
         self.__std = std
 
 class Gaussian2FuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a linear z-shaped (ramp) fuzzy set
+
+    Parameters
+    ----------
+    :param left_upper: the upper left tail of the triangular fuzzy set
+    :param left_upper: np.number
+
+    :param right_lower: the lower right tail of the triangular fuzzy set
+    :param right_lower: np.number
+    '''    
     def __init__(self, 
                  mean1: np.number, 
                  std1: np.number,

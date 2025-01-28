@@ -1,9 +1,21 @@
 
-from softpy.fuzzy.fuzzyset import FuzzySet
+from .fuzzyset import FuzzySet
 
 
 class FuzzyPartition():
+    '''
+    Implements a fuzzy partition, that is a collection of fuzzy sets that generalizes a standard partition.
+    It does not enforce any specific constraints (e.g., membership degrees summing to 1 as in Ruspini partitions), so it
+    can be used also to implement non-standard definitions of fuzzy partition
 
+    Parameters
+    ----------
+    :param name: the name of the fuzzy partition
+    :type name: str
+
+    :param fuzzy_sets: a dictionary of fuzzy sets
+    :type fuzzy_sets: dict[str, FuzzySet]
+    '''
     def __init__(self, name: str, fuzzy_sets: dict[str, FuzzySet]) -> None:
         if not isinstance(name, str):
             raise TypeError('name should be a string')

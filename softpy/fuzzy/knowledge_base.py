@@ -2,9 +2,9 @@ from enum import Enum
 from typing import Callable
 import numpy as np
 
-from softpy.fuzzy.fuzzy_rule import ClassifierRule, MamdaniRule, SingletonRule, TSKRule
-from softpy.fuzzy.operations import maximum, minimum
-from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
+from .fuzzy_rule import ClassifierRule, MamdaniRule, SingletonRule, TSKRule
+from .operations import maximum, minimum
+from .fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
 from .fuzzyset import FuzzySet, DiscreteFuzzySet, ContinuousFuzzySet
 from abc import ABC, abstractmethod
 import scipy as sp
@@ -41,6 +41,27 @@ class KnowledgeBaseABC(ABC):
         pass
 
 class MamdaniKnowledgeBase(KnowledgeBaseABC):
+    '''
+    Implements the logic of a Mamdani fuzzy control system.
+    For each possible output of the system, its corresponding membership value is computed as:
+    TC(R1, ..., RK)
+    where TC is a t-conorm, and R1, ..., RK are all the rules sharing the same conseguence_name.
+    The final result of the rule is computed through defuzzification
+
+    Parameters
+    ----------
+    :param rules: A list of Mamdani rules
+    :type rules: list[MamdaniRule]
+
+    :param aggregation_type: Specifies whether the aggregation is performed after or before inference
+    :type aggregation_type: AggregationType, default=AggregationType.FATI
+
+    :param tconorm_aggregation: The t-conorm to be used for aggregation
+    :type tconorm_aggregation: Callable, default=maximum
+
+    :param defuzzification_function: The defuzzificuation function
+    :type defuzzification_function: Callable, default=center_of_gravity
+    '''
     def __init__(self, 
                  rules: list[MamdaniRule],    
                  aggregation_type: AggregationType = AggregationType.FATI,
@@ -73,6 +94,11 @@ class MamdaniKnowledgeBase(KnowledgeBaseABC):
         self.__defuzzification_function: Callable = defuzzification_function
 
     def infer(self, params: dict[str, np.number]) -> dict[str, np.number]:
+        '''
+        Evaluates the rules in the knowledge base using the input parameter values,
+        aggregates their results using the t-conorm specified in the constructor and then
+        computes the final results using defuzzification
+        '''
         output_fuzzy_sets = self.evaluate(params)
         results = {}
 
@@ -149,6 +175,17 @@ class MamdaniKnowledgeBase(KnowledgeBaseABC):
     
 
 class TSKKnowledgeBase(KnowledgeBaseABC):
+    '''
+    Implements the logic of a TSK fuzzy control system.
+    For each possible output of the system, the final result is computed as:
+    (R1*W1 + ... + RK*WK)/(W1 + ... + WK)
+    where R1, ..., RK are the results of the rules sharing the same conseguence_name and W1, ..., WK the corresponding membership values.
+
+    Parameters
+    ----------
+    :param rules: A list of TSK rules
+    :type rules: list[TSKRule]
+    '''
     def __init__(self,
                  rules: list[TSKRule]):
         
@@ -169,12 +206,14 @@ class TSKKnowledgeBase(KnowledgeBaseABC):
                 self.__rules[r.name_conseguence] = [r]
         
     def infer(self, params: dict[str, np.number]):
+        '''
+        Evaluates the rules in the knowledge base using the input parameter values and aggregates the results of the rules
+        '''
         results = self.__evaluate(params)
         
         return results
 
     def __evaluate(self, params: dict[str, np.number]) -> dict[str, np.number]:
-        
         output = {}
         
         for name_output, lists_rules in self.__rules.items():
@@ -199,6 +238,17 @@ class TSKKnowledgeBase(KnowledgeBaseABC):
         return output
 
 class SingletonKnowledgeBase(KnowledgeBaseABC):
+    '''
+    Implements the logic of a singleton fuzzy control system.
+    For each possible output of the system, the final result is computed as:
+    (R1*W1 + ... + RK*WK)/(W1 + ... + WK)
+    where R1, ..., RK are the results of the rules sharing the same conseguence_name and W1, ..., WK the corresponding membership values.
+
+    Parameters
+    ----------
+    :param rules: A list of singleton rules
+    :type rules: list[SingletonRule]
+    '''
     def __init__(self,
                  rules: list[SingletonRule]):
         
@@ -220,6 +270,9 @@ class SingletonKnowledgeBase(KnowledgeBaseABC):
 
                 
     def infer(self, params: dict[str, np.number]):
+        '''
+        Evaluates the rules in the knowledge base using the input parameter values and aggregates the results of the rules
+        '''
         results = self.__evaluate(params)
         
         return results
@@ -250,6 +303,15 @@ class SingletonKnowledgeBase(KnowledgeBaseABC):
         return output
     
 class ClassifierKnowledgeBase(KnowledgeBaseABC):
+    '''
+    Implements the logic of a classifier fuzzy control system.
+    For each possible output of the system, the final result is computed by selecting the rule associated with the maximum membership value.
+
+    Parameters
+    ----------
+    :param rules: A list of classifier rules
+    :type rules: list[ClassifierRule]
+    '''
     def __init__(self,
                  rules: list[ClassifierRule]):
         
@@ -271,6 +333,9 @@ class ClassifierKnowledgeBase(KnowledgeBaseABC):
 
                 
     def infer(self, params: dict[str, np.number]):
+        '''
+        Evaluates the rules in the knowledge base using the input parameter values and aggregates the results of the rules
+        '''
         results = self.__evaluate(params)
         
         return results

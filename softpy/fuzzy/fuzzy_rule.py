@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Callable
+from typing import Callable, Any
 import numpy as np
 
-from softpy.fuzzy.fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
-from softpy.fuzzy.operations import  maximum, minimum
+from .fuzzy_operation import ContinuousFuzzyCombination, DiscreteFuzzyCombination
+from .operations import  maximum, minimum
 from .fuzzyset import FuzzySet, DiscreteFuzzySet, ContinuousFuzzySet, SingletonFuzzySet
 from abc import ABC, abstractmethod
 
@@ -17,7 +17,7 @@ class FuzzyRule(ABC):
     '''
  
     @abstractmethod
-    def evaluate(self, params : dict) -> FuzzySet:
+    def evaluate(self, params : dict) -> Any:
         pass
 
 
@@ -26,15 +26,29 @@ class MamdaniRule(FuzzyRule):
     An implementation of a fuzzy rule for a Mamdani-type control system.
     
     Rule is in the following form:
-    T(F1, F2, ..., FN)
+    T(P1(V1), ..., PN(VN), C)
+    where T is a t-norm, P1, ..., PN are the premises and C the consequent
+
+    Parameters
+    ----------
+    :param premises: A dictionary of fuzzy sets representing the premises of the rule
+    :type premises: dict[str, list[FuzzySet]]
+
+    :param name_conseguence: The name of consequent result
+    :type name_conseguence: str
+
+    :param conseguence: The fuzzy set for the rule consequence
+    :type conseguence: FuzzySet
+
+    :param tnorm_operation: The tnorm used to compute the membership value for the rule
+    :type tnorm_operation: Callable, default=minimum
     '''
 
     def __init__(self, 
                  premises: dict[str, list[FuzzySet]], 
                  name_conseguence: str,
                  conseguence: FuzzySet,
-                 tnorm_operation: Callable[[FuzzySet, FuzzySet], 
-                                           ContinuousFuzzyCombination | DiscreteFuzzyCombination] = minimum):
+                 tnorm_operation: Callable = minimum):
         
         if not isinstance(premises, dict):
             raise TypeError("premise should be a dict")
@@ -102,7 +116,7 @@ class MamdaniRule(FuzzyRule):
     
     def evaluate(self, params: dict[str, np.number]) -> FuzzySet:
         '''
-        It evaluates the MamdaniRule given a list of elements, ones per premise.
+        It evaluates the MamdaniRule given a list of elements, one per premise.
         '''
         if not isinstance(params, dict):
             raise TypeError("params should be a dict")
@@ -146,12 +160,28 @@ class TSKRule(FuzzyRule):
     '''
     An implementation of a Takagi Sugeno Kang fuzzy rule.
     
-    Rule is in the following form:
-    dot((W1, W2, ..., WN), (F1, F2, ..., FN)) + W0
+    The output of the rule is computed in the following form:
+    dot((W1, W2, ..., WN), (V1, V2, ..., VN)) + W0
+    and associated with a membership computed as:
+    T(P1(V1), ..., PN(VN))
+
+    Parameters
+    ----------
+    :param premises: A dictionary of fuzzy sets representing the premises of the rule
+    :type premises: dict[str, list[FuzzySet]]
+
+    :param weights: A vector of weights for the premises
+    :type weights: list[np.number]|np.ndarray
+
+    :param name_conseguence: The name of consequent result
+    :type name_conseguence: str
+
+    :param tnorm_operation: The tnorm used to compute the membership value for the rule
+    :type tnorm_operation: Callable, default=minimum
     '''
     def __init__(self, 
                  premises : dict[str, list[FuzzySet]], 
-                 weights: list[np.number],
+                 weights: list[np.number]|np.ndarray,
                  name_conseguence: str,
                  tnorm_operation: Callable = minimum):
         
@@ -220,6 +250,9 @@ class TSKRule(FuzzyRule):
         return all_fuzzy_set
     
     def evaluate(self, params: dict[str, np.number]) -> tuple[np.number, np.number]:
+        '''
+        It evaluates the TSKRule given a dictionary of values
+        '''
         if not isinstance(params, dict):
             raise TypeError("params should be a dict")
         
@@ -240,6 +273,28 @@ class TSKRule(FuzzyRule):
         return output_rule, weight
     
 class SingletonRule(FuzzyRule):
+    '''
+    An implementation of a Singleton fuzzy rule.
+    
+    The rule always provides as output the sole member of the consequent SingletonFuzzySet, associated
+    with a membership degree computed as
+    T(P1(V1),...,PN(VN))
+    where T is a t-norm
+
+    Parameters
+    ----------
+    :param premises: A dictionary of fuzzy sets representing the premises of the rule
+    :type premises: dict[str, list[FuzzySet]]
+
+    :param name_conseguence: The name of consequent result
+    :type name_conseguence: str
+
+    :param conseguence: The singleton fuzzy set for the rule consequence
+    :type conseguence: SingletonFuzzySet
+
+    :param tnorm_operation: The tnorm used to compute the membership value for the rule
+    :type tnorm_operation: Callable, default=minimum
+    '''
     def __init__(self, 
                  premises : dict[str, list[FuzzySet]], 
                  name_conseguence: str,
@@ -311,7 +366,7 @@ class SingletonRule(FuzzyRule):
     
     def evaluate(self, params: dict[str, np.number]) -> tuple[np.number, np.number]:
         '''
-        It evaluates the MamdaniRule given a list of elements, ones per premise.
+        It evaluates the SingletonRule given a list of elements, one per premise.
         '''
 
         if not isinstance(params, dict):
@@ -334,6 +389,28 @@ class SingletonRule(FuzzyRule):
         return output_rule, weight
     
 class ClassifierRule(FuzzyRule):
+    '''
+    An implementation of a classifier fuzzy rule.
+    
+    The rule always provides as output a single number, associated
+    with a membership degree computed as
+    T(P1(V1),...,PN(VN))
+    where T is a t-norm
+
+    Parameters
+    ----------
+    :param premises: A dictionary of fuzzy sets representing the premises of the rule
+    :type premises: dict[str, list[FuzzySet]]
+
+    :param name_conseguence: The name of consequent result
+    :type name_conseguence: str
+
+    :param conseguence: The number representing the output of the rule
+    :type conseguence: np.number
+
+    :param tnorm_operation: The tnorm used to compute the membership value for the rule
+    :type tnorm_operation: Callable, default=minimum
+    '''
     def __init__(self, 
                  premises : dict[str, list[FuzzySet]], 
                  name_conseguence: str,
@@ -405,7 +482,7 @@ class ClassifierRule(FuzzyRule):
 
     def evaluate(self, params: dict[str, np.number]) -> tuple[str, np.number]:
         '''
-        It evaluates the MamdaniRule given a list of elements, ones per premise.
+        It evaluates the ClassifierRule given a list of elements, one per premise.
         '''
 
         if not isinstance(params, dict):
