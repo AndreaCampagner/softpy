@@ -6,6 +6,7 @@ from .fuzzy_rule import FuzzyRule, TSKRule, MamdaniRule, SingletonRule, Classifi
 from .fuzzyset import FuzzySet, DiscreteFuzzySet, ContinuousFuzzySet, SingletonFuzzySet, TriangularFuzzySet, TrapezoidalFuzzySet, LinearSFuzzySet, LinearZFuzzySet, GaussianFuzzySet, Gaussian2FuzzySet
 from .fuzzyset import GBellFuzzySet, SigmoidalFuzzySet, DiffSigmoidalFuzzySet, ProdSigmoidalFuzzySet, ZShapedFuzzySet, SShapedFuzzySet, PiShapedFuzzySet
 from .knowledge_base import KnowledgeBaseABC, MamdaniKnowledgeBase, TSKKnowledgeBase, SingletonKnowledgeBase, ClassifierKnowledgeBase
+from . import memberships_function
 
 __all__ = ["FuzzyCMeans",
            "ControlSystemABC", "FuzzyControlSystem",

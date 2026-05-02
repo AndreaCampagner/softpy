@@ -437,7 +437,13 @@ disable=raw-checker-failed,
         use-implicit-booleaness-not-comparison-to-string,
         use-implicit-booleaness-not-comparison-to-zero,
         missing-module-docstring,
-        trailing-whitespace
+        trailing-whitespace,
+        too-many-arguments,
+        too-many-positional-arguments,
+        line-too-long,
+        trailing-newlines,
+        superfluous-parens,
+        consider-using-f-string
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

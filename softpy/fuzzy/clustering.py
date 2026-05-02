@@ -16,7 +16,7 @@ class FuzzyCMeans(BaseEstimator,ClusterMixin):
   :type n_clusters: int, default=2
   
   :param epsilon: Error tolerance parameter for avoid division by 0
-  :type n_clusters: float, default=0.001
+  :type epsilon: float, default=0.001
 
   :param iters: The number of iterations for the optimization routine
   :type iters: int, default=100

@@ -4,6 +4,8 @@ from typing import Callable
 import numpy as np
 import scipy.stats as stats
 from copy import deepcopy
+from types import MethodType
+
 
 
 class Candidate(ABC):
@@ -46,8 +48,11 @@ class BitVectorCandidate(Candidate):
     :param candidate: the representation of the candidate solution
     :type candidate: np.ndarray
 
-    :param p: the mutation probability
-    :type p: np.number, default=0.5
+    :param mutation_rate: the mutation probability
+    :type mutation_rate: np.number, default=0.05
+
+    :param crossover_rate: the crossover probability
+    :type crossover_rate: np.number, default=0.5
 
     :param uniform: specifies whether to adopt uniform (if True) or single-point (if False) crossover
     :type uniform: bool, default=False
@@ -58,40 +63,53 @@ class BitVectorCandidate(Candidate):
     :param recombine: optional user-defined function for crossover
     :type recombine: Callable|None, default=None
     '''
-    def __init__(self, size: int, candidate: np.ndarray, p: np.number = 0.5, uniform: bool = False, mutate: Callable|None=None, recombine: Callable|None=None):
+    def __init__(self, size: int, candidate: np.ndarray, mutation_rate: np.number = 0.05, crossover_rate: np.number = 0.5, uniform: bool = False, mutate: Callable|None=None, recombine: Callable|None=None):
         self.size = size
-        self.p = p
+        self.mutation_rate = mutation_rate
+        self.crossover_rate = crossover_rate
         self.candidate = candidate
         self.uniform = uniform
         if mutate is not None:
-            self.mutate = mutate
+            self.mutate = MethodType(mutate, self)
         if recombine is not None:
-            self.recombine = recombine
+            self.recombine = MethodType(recombine, self)
 
-    def generate(size: int = 1, p: np.number = 0.5, uniform: bool = False, mutate:Callable|None=None, recombine:Callable|None=None) -> BitVectorCandidate:
+    def generate(size: int = 1, mutation_rate: np.number = 0.05, crossover_rate : np.number = 0.5, uniform: bool = False, mutate:Callable|None=None, recombine:Callable|None=None) -> BitVectorCandidate:
         if type(uniform) != bool:
             raise ValueError("uniform must be of type bool, was %s" % type(uniform))
-        if p < 0 or p > 1:
-            raise ValueError("p must be a number between 0 and 1, was %s of type %s" % (p, type(p)))
+        if mutation_rate < 0 or mutation_rate > 1:
+            raise ValueError("mutation_rate must be a number between 0 and 1, was %s of type %s" % (mutation_rate, type(mutation_rate)))
+        if crossover_rate < 0 or crossover_rate > 1:
+            raise ValueError("crossover_rate must be a number between 0 and 1, was %s of type %s" % (crossover_rate, type(crossover_rate)))
         candidate = np.random.choice(a=[True,False], size=size, replace=True)
-        return BitVectorCandidate(size, candidate, p, uniform, mutate, recombine)
+
+        if recombine is not None:
+            def lambda_rec(self, c: BitVectorCandidate):
+                if np.random.rand() <= self.crossover_rate:
+                    self.recombine(c)
+                else:
+                    self
+        return BitVectorCandidate(size, candidate, mutation_rate, crossover_rate, uniform, mutate, recombine)
 
     def mutate(self) -> BitVectorCandidate:
-        candidate = np.array([v if np.random.rand() >= self.p else bool(1-v) for v in self.candidate])
-        return BitVectorCandidate(self.size, candidate, self.p, self.uniform,mutate=self.mutate, recombine=self.recombine)
+        candidate = np.array([v if np.random.rand() >= self.mutation_rate else bool(1-v) for v in self.candidate])
+        return BitVectorCandidate(self.size, candidate, self.mutation_rate, self.crossover_rate, self.uniform,mutate=self.mutate.__func__, recombine=self.recombine.__func__)
     
     def recombine(self, c: BitVectorCandidate) -> BitVectorCandidate:
-        if self.uniform:
-            return self.recombine_uniform(c)
+        if np.random.rand() <= self.crossover_rate:
+            if self.uniform:
+                return self.recombine_uniform(c)
+            else:
+                return self.recombine_single_point(c)
         else:
-            return self.recombine_single_point(c)
+            return self
 
     def recombine_single_point(self, c: BitVectorCandidate) -> BitVectorCandidate:
         idx = np.random.randint(0,self.size)
         candidate = np.empty(np.max([self.size, c.size]), dtype=bool)
         candidate[:idx] = self.candidate[:idx]
         candidate[idx:] = c.candidate[idx:]
-        return BitVectorCandidate(self.candidate.shape[0], candidate, self.p, self.uniform, mutate=self.mutate, recombine=self.recombine)
+        return BitVectorCandidate(self.candidate.shape[0], candidate, self.mutation_rate, self.crossover_rate, self.uniform, mutate=self.mutate.__func__, recombine=self.recombine.__func__)
     
     def recombine_uniform(self, c: BitVectorCandidate) -> BitVectorCandidate:
         candidate = np.empty(np.min([self.size, c.size]), dtype=bool)
@@ -100,7 +118,10 @@ class BitVectorCandidate(Candidate):
                 candidate[i] = self.candidate[i]
             else:
                 candidate[i] = c.candidate[i]
-        return BitVectorCandidate(self.candidate.shape[0], candidate, self.p, self.uniform, mutate=self.mutate, recombine=self.recombine)
+        return BitVectorCandidate(self.candidate.shape[0], candidate, self.mutation_rate, self.crossover_rate, self.uniform, mutate=self.mutate.__func__, recombine=self.recombine.__func__)
+    
+    def __str__(self) -> str:
+        return str(self.candidate)
 
 
 
@@ -122,6 +143,9 @@ class FloatVectorCandidate(Candidate):
     :param distribution: the probability distribution used for mutation.
     :type p: object (must implement a rvs method)
 
+    :param crossover_rate: the crossover probability
+    :type crossover_rate: np.number, default=0.5
+
     :param lower: lower bound of the interval of definition for generation and mutation
     :type lower: np.number, default=0
 
@@ -137,27 +161,39 @@ class FloatVectorCandidate(Candidate):
     :param recombine: optional user-defined function for crossover
     :type recombine: Callable|None, default=None
     '''
-    def __init__(self, size: int, candidate: np.ndarray, distribution, lower:np.number=0, upper:np.number=1,
+    def __init__(self, size: int, candidate: np.ndarray, distribution, crossover_rate : np.number = 0.5,
+                lower:np.number=0, upper:np.number=1,
                 intermediate:bool=False, mutate:Callable|None=None, recombine:Callable|None=None):
         self.size = size
         self.candidate = candidate
         self.distribution = distribution
+        self.crossover_rate = crossover_rate
         self.lower = lower
         self.upper = upper
         self.intermediate = intermediate
         if mutate is not None:
-            self.mutate = mutate
+            self.mutate = MethodType(mutate, self)
         if recombine is not None:
-            self.recombine = recombine
+            self.recombine = MethodType(recombine, self)
 
-    def generate(size: int = 1, distribution=stats.uniform, lower:np.number=0, upper:np.number=1, intermediate:bool=False,
+    def generate(size: int = 1, distribution=stats.uniform, crossover_rate : np.number = 0.5,
+                lower:np.number=0, upper:np.number=1, intermediate:bool=False,
                 mutate:Callable|None=None, recombine:Callable|None=None) -> FloatVectorCandidate:
         try:
             _ = distribution.rvs(size=size)
         except:
             raise ValueError("distribution should have rvs method")
+        if crossover_rate < 0 or crossover_rate > 1:
+            raise ValueError("crossover_rate must be a number between 0 and 1, was %s of type %s" % (crossover_rate, type(crossover_rate)))
         candidate = stats.uniform.rvs(size=size, loc=lower, scale=upper)
-        return FloatVectorCandidate(size, candidate, distribution, lower, upper, intermediate, mutate, recombine)
+
+        if recombine is not None:
+            def lambda_rec(self, c: FloatVectorCandidate):
+                if np.random.rand() <= self.crossover_rate:
+                    self.recombine(c)
+                else:
+                    self
+        return FloatVectorCandidate(size, candidate, distribution, crossover_rate, lower, upper, intermediate, mutate, recombine)
 
     def mutate(self) -> FloatVectorCandidate:
         candidate = self.candidate + self.distribution.rvs(size=self.size)
@@ -168,15 +204,18 @@ class FloatVectorCandidate(Candidate):
             else:
                 while (candidate[i] > self.upper) or (candidate[i] < self. lower):
                     candidate = self.candidate + self.distribution.rvs(size=1)
-        return FloatVectorCandidate(self.size, candidate, self.distribution, self.lower, self.upper, mutate=self.mutate, recombine=self.recombine)
+        return FloatVectorCandidate(self.size, candidate, self.distribution, self.crossover_rate, self.lower, self.upper, mutate=self.mutate.__func__, recombine=self.recombine.__func__)
 
     def recombine(self, c: FloatVectorCandidate) -> FloatVectorCandidate:
-        alpha = np.random.rand()
-        if self.intermediate:
-            alpha = np.random.rand(self.size)
-        candidate = alpha*self.candidate + (1-alpha)*c.candidate
-        return FloatVectorCandidate(self.candidate.shape[0], candidate, self.distribution, self.lower, self.upper,
-                                    mutate=self.mutate, recombine=self.recombine)
+        if np.random.rand() <= self.crossover_rate:
+            alpha = np.random.rand()
+            if self.intermediate:
+                alpha = np.random.rand(self.size)
+            candidate = alpha*self.candidate + (1-alpha)*c.candidate
+            return FloatVectorCandidate(self.candidate.shape[0], candidate, self.distribution, self.crossover_rate, self.lower, self.upper,
+                                        mutate=self.mutate.__func__, recombine=self.recombine.__func__)
+        else:
+            return self
 
 
 class PathCandidate(Candidate):
@@ -216,9 +255,9 @@ class PathCandidate(Candidate):
         self.mutable_length = mutable_length
         self.stop_early_prob=stop_early_prob
         if mutate is not None:
-            self.mutate = mutate
+            self.mutate = MethodType(mutate,self)
         if recombine is not None:
-            self.recombine = recombine
+            self.recombine = MethodType(recombine,self)
 
     def generate(graph: np.ndarray = np.empty(1), max_length: int | None = None, stop_early_prob:np.number=0.0, mutable_length:bool=False,
                  mutate:Callable|None=None, recombine:Callable|None=None):
@@ -275,7 +314,7 @@ class PathCandidate(Candidate):
                 path.append(node)
 
         return PathCandidate(path, self.graph, self.max_length, mutable_length=self.mutable_length, stop_early_prob=self.stop_early_prob,
-                             mutate=self.mutate, recombine=self.recombine)
+                             mutate=self.mutate.__func__, recombine=self.recombine.__func__)
     
     def recombine(self, c: PathCandidate) -> PathCandidate:
         
@@ -304,7 +343,7 @@ class PathCandidate(Candidate):
                 new_path.append(node)
         
         return PathCandidate(new_path, self.graph, self.max_length, mutable_length=self.mutable_length, stop_early_prob=self.stop_early_prob,
-                             mutate=self.mutate, recombine=self.recombine)
+                             mutate=self.mutate.__func__, recombine=self.recombine.__func__)
     
 
 class TreeCandidate(Candidate):
@@ -360,9 +399,9 @@ class TreeCandidate(Candidate):
         self.stop_early_prob = stop_early_prob
         self.mutate_prob = mutate_prob
         if mutate is not None:
-            self.mutate = mutate
+            self.mutate = MethodType(mutate, self)
         if recombine is not None:
-            self.recombine = recombine
+            self.recombine = MethodType(recombine, self)
 
     def generate(function_set: list = [], arities: list[int]|np.ndarray = [], max_depth:int = 1, max_absolute_depth:int = 1,
                 constant_generator:Callable = None, stop_early_prob:np.number = 0.0, mutate_prob:np.number=0.2,
@@ -548,9 +587,9 @@ class DictionaryCandidate(Candidate):
         self.discrete = discrete
         self.update_distrib = update_distrib
         if mutate is not None:
-            self.mutate = mutate
+            self.mutate = MethodType(mutate, self)
         if recombine is not None:
-            self.recombine = recombine
+            self.recombine = MethodType(recombine, self)
 
     def generate(names: list = [], gens: list[bool] = [], discrete: list = [], update_distrib: list[Callable] = [],
                 mutate:Callable|None=None, recombine:Callable|None=None) -> DictionaryCandidate:
@@ -569,7 +608,7 @@ class DictionaryCandidate(Candidate):
         values = {}
         for i, name in enumerate(self.names):
                 values[name] = self.update_distrib[i](self.values[name])
-        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib, mutate=self.mutate, recombine=self.recombine)
+        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib, mutate=self.mutate.__func__, recombine=self.recombine.__func__)
     
     def recombine(self, c: DictionaryCandidate) -> DictionaryCandidate:
         values = {}
@@ -583,4 +622,4 @@ class DictionaryCandidate(Candidate):
                 alpha = np.random.rand()
                 values[name] = alpha*self.values[name] + (1-alpha)*c.values[name]
 
-        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib, mutate=self.mutate, recombine=self.recombine)
+        return DictionaryCandidate(self.names, self.gens, values, self.discrete, self.update_distrib, mutate=self.mutate.__func__, recombine=self.recombine.__func__)

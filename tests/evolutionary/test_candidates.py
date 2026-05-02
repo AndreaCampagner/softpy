@@ -31,11 +31,11 @@ class TestBitVectorCandidate:
                 np.random.seed(0)
                 v = np.random.choice(a=[True,False], size=size, replace=True)
                 np.random.seed(0)
-                c = BitVectorCandidate.generate(size,p,uniform)
+                c = BitVectorCandidate.generate(size,p,uniform=uniform)
                 assert c.candidate == v
         else:
             with pytest.raises(exception_expected) as e_info:
-                c = BitVectorCandidate.generate(size,p,uniform)
+                c = BitVectorCandidate.generate(size,p,uniform=uniform)
 
     @pytest.mark.parametrize(
         "uniform,exception_expected",
@@ -113,11 +113,11 @@ class TestFloatVectorCandidate:
                       exception_expected: Exception):
         if exception_expected == None:
             with not_raises() as e_info:
-                c = FloatVectorCandidate.generate(size,distribution,lower,upper,intermediate)
+                c = FloatVectorCandidate.generate(size=size,distribution=distribution,lower=lower,upper=upper,intermediate=intermediate)
         else:
             with pytest.raises(exception_expected) as e_info:
                 print(e_info)
-                c = FloatVectorCandidate.generate(size,distribution,lower,upper,intermediate)
+                c = FloatVectorCandidate.generate(size=size,distribution=distribution,lower=lower,upper=upper,intermediate=intermediate)
 
     @pytest.mark.parametrize(
         "intermediate,exception_expected",
@@ -129,8 +129,8 @@ class TestFloatVectorCandidate:
     def test_recombine(self, intermediate, exception_expected: Exception):
         if exception_expected == None:
             with not_raises() as e_info:
-                c1 = FloatVectorCandidate.generate(10,stats.uniform,0,1,intermediate)
-                c2 = FloatVectorCandidate.generate(10,stats.uniform,0,1,intermediate)
+                c1 = FloatVectorCandidate.generate(10,stats.uniform,lower=0,upper=1,intermediate=intermediate)
+                c2 = FloatVectorCandidate.generate(10,stats.uniform,lower=0,upper=1,intermediate=intermediate)
                 c = c1.recombine(c2)
                 for i in range(10):
                     assert np.min([c1.candidate[i],c2.candidate[i]]) <= c.candidate[i]
@@ -151,7 +151,7 @@ class TestFloatVectorCandidate:
     def test_mutate(self, size,distribution,lower,upper,intermediate, exception_expected: Exception):
         if exception_expected == None:
             with not_raises() as e_info:
-                c = FloatVectorCandidate.generate(size,distribution,lower,upper,intermediate)
+                c = FloatVectorCandidate.generate(size,distribution,lower=lower,upper=upper,intermediate=intermediate)
                 for i in range(10):
                     assert lower <= c.candidate[i]
                     assert c.candidate[i] <= upper
@@ -305,7 +305,7 @@ class TestTreeCandidate:
                 while len(nodes) != 0:
                     node: TreeCandidate.NodeCandidate = nodes.pop()
                     depth = node.depth
-                    assert depth <= max_depth
+                    assert depth <= max_absolute_depth
                     num = 0 if node.children is None else len(node.children)
                     num = 0 if node.children is None else len(node.children)
                     for i in range(num):
@@ -333,7 +333,7 @@ class TestTreeCandidate:
                 while len(nodes) != 0:
                     node: TreeCandidate.NodeCandidate = nodes.pop()
                     depth = node.depth
-                    assert depth <= max_depth
+                    assert depth <= max_absolute_depth
                     num = 0 if node.children is None else len(node.children)
                     num = 0 if node.children is None else len(node.children)
                     for i in range(num):

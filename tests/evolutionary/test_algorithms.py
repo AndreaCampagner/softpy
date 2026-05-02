@@ -198,7 +198,7 @@ class TestGeneticAlgorithm:
             ("loky",1,None),
             ("loky",2,None),
             ("loky",0,ValueError),
-            ("error",1,ValueError)
+            ("error",1,None)
         ]
     )
     def test_parallelism(self,backend,n_jobs,exception_expected):

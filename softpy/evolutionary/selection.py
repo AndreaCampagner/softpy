@@ -14,7 +14,7 @@ def fitness_prop_selection(fitness: np.ndarray, current_step=None):
     An implementation of fitness proportional selection
     '''
     probs = fitness/np.sum(fitness)
-    return np.random.choice(range(fitness.shape[0]), probs=probs), None
+    return np.random.choice(range(fitness.shape[0]), p=probs), None
 
 def stochastic_universal_selection(fitness: np.ndarray, current_step=None):
     '''

@@ -4,7 +4,7 @@ from functools import partial
 from typing import Callable
 import numpy as np
 import scipy as sp
-import softpy.fuzzy.memberships_function as mf
+from . import memberships_function as mf
 
 
 class FuzzySet(ABC):
@@ -17,7 +17,7 @@ class FuzzySet(ABC):
         pass
 
     @abstractmethod
-    def __getitem__(self, alpha):
+    def __getitem__(self, alpha: np.number):
         '''
         Gets an alpha cut
         '''
@@ -39,27 +39,10 @@ class FuzzySet(ABC):
 
     @abstractmethod
     def memberships_function(self, x) -> np.number:
+        '''
+        Utility function for returning the membership values
+        '''
         pass
-
-"""
-class LambdaFuzzySet(FuzzySet):
-    '''Abstract Class for a fuzzy set defined by an explicitly specified membership function'''
-    def __init__(self, func : function):
-        self.func = func
-
-    def __call__(self, arg) -> np.number:
-        return self.func(arg)
-    
-    def __getitem__(self, alpha):
-        pass
-
-    def fuzziness(self):
-        pass
-
-    def hartley(self):
-        pass
-
-"""
 
 class DiscreteFuzzySet(FuzzySet):
     '''
@@ -78,20 +61,17 @@ class DiscreteFuzzySet(FuzzySet):
     :type dynamic: bool, default=True
     '''
 
-    def __init__(self, items: list|np.ndarray, memberships: list|np.ndarray, dynamic=True):
-        '''
-        
-        '''
-        if type(items) != list and type(items) != np.ndarray:
+    def __init__(self, items: list|np.ndarray, memberships: list|np.ndarray, dynamic: bool=True):
+        if not isinstance(items, list) and not isinstance(items, np.ndarray):
             raise TypeError("items should be list or numpy.array")
         
-        if type(memberships) != list and type(memberships) != np.ndarray:
+        if not isinstance(memberships, list) and not isinstance(memberships, np.ndarray):
             raise TypeError("memberships should be list or numpy.array")
         
         if len(items) != len(memberships):
             raise ValueError("items and memberships should have the same length")
 
-        if type(dynamic) != bool:
+        if not isinstance(dynamic, bool):
             raise TypeError("dynamic should be bool")
         
         self.__items = np.array(items)
@@ -155,7 +135,7 @@ class DiscreteFuzzySet(FuzzySet):
         if not isinstance(other, DiscreteFuzzySet):
             return NotImplemented
         
-        for v in list(self.__set_items.keys()) + list(other.__set_items.keys()):
+        for v in list(self.__set_items.keys()) + list(other.set_items.keys()):
             try:
                 v1 = self(v)
             except ValueError:
@@ -223,10 +203,13 @@ class ContinuousFuzzySet(FuzzySet):
                             "as input a real number and returns a value in [0,1]")
         
         if not isinstance(bound, tuple):
-            raise TypeError("buond should be a tuple")
+            raise TypeError("bound should be a tuple")
+        
+        if bound is None:
+            bound = (-np.inf, np.inf)
         
         if bound[0] > bound[1]:
-            raise ValueError("buond[0] should be less equal than buond[1]")
+            raise ValueError("bound[0] should be less equal than bound[1]")
 
         if not np.issubdtype(type(epsilon), np.number):
             raise TypeError("epsilon should be a number")
@@ -277,7 +260,7 @@ class ContinuousFuzzySet(FuzzySet):
         impossible to compute the alpha cuts in closed form, the method simply checks values in a grid and returns
         the list of all elements having membership degree larger than alpha
         '''
-        if self.bound == None:
+        if self.bound is None:
             raise AttributeError("You should define the interval on which you want compute alpha cut")
 
         if not np.issubdtype(type(alpha), np.number):
@@ -369,7 +352,7 @@ class TriangularFuzzySet(ContinuousFuzzySet):
         if not (left <= spike <= right):
             raise ValueError("Parameters a, b and c should be a <= b <= c")
 
-        if bound == None:
+        if bound is None:
             bound=(left, right)
 
         super().__init__(partial(mf.triangular, a = left, b = spike, c = right), 
@@ -422,7 +405,7 @@ class TrapezoidalFuzzySet(ContinuousFuzzySet):
             raise ValueError("Parameters left_lower, left_upper, right_upper and right_lower should be left_lower" +
                              "<= left_upper <= right_upper <= right_lower")
 
-        if bound == None:
+        if bound is None:
             bound=(left_lower, right_lower)
             
         super().__init__(partial(mf.trapezoidal, 
@@ -463,7 +446,7 @@ class LinearZFuzzySet(ContinuousFuzzySet):
         if not (left_upper <= right_lower):
             raise ValueError("Parameters left_upper and right_lower should be left_upper <= right_lower")
 
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, right_lower)
 
         super().__init__(partial(mf.linear_z_shaped, 
@@ -501,7 +484,7 @@ class LinearSFuzzySet(ContinuousFuzzySet):
         if not (left_lower <= right_upper):
             raise ValueError("Parameters left_lower and right_upper should be left_lower <= right_upper")
 
-        if bound == None:
+        if bound is None:
             bound= (left_lower, np.inf)
 
         super().__init__(partial(mf.linear_s_shaped, 
@@ -513,6 +496,17 @@ class LinearSFuzzySet(ContinuousFuzzySet):
 
 class GaussianFuzzySet(ContinuousFuzzySet):
   
+    '''
+    Implements a gaussian fuzzy set
+
+    Parameters
+    ----------
+    :param mean: the middle point of the gaussian fuzzy set
+    :param mean: np.number
+
+    :param std: the standard deviation of the gaussian fuzzy set
+    :param std: np.number
+    '''    
     def __init__(self, 
                  mean: np.number,
                  std: np.number,
@@ -528,7 +522,7 @@ class GaussianFuzzySet(ContinuousFuzzySet):
         if std <= 0:
             raise ValueError("std should greater than 0")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.gaussian, mean=mean, std=std), epsilon=epsilon, bound=bound)
@@ -538,16 +532,22 @@ class GaussianFuzzySet(ContinuousFuzzySet):
 
 class Gaussian2FuzzySet(ContinuousFuzzySet):
     '''
-    Implements a linear z-shaped (ramp) fuzzy set
+    Implements a double gaussian fuzzy set
 
     Parameters
     ----------
-    :param left_upper: the upper left tail of the triangular fuzzy set
-    :param left_upper: np.number
+    :param mean1: the middle point of the first gaussian fuzzy set
+    :param mean1: np.number
 
-    :param right_lower: the lower right tail of the triangular fuzzy set
-    :param right_lower: np.number
-    '''    
+    :param std1: the standard deviation of the first gaussian fuzzy set
+    :param std1: np.number
+
+    :param mean2: the middle point of the second gaussian fuzzy set
+    :param mean2: np.number
+
+    :param std2: the standard deviation of the second gaussian fuzzy set
+    :param std2: np.number
+    '''        
     def __init__(self, 
                  mean1: np.number, 
                  std1: np.number,
@@ -577,7 +577,7 @@ class Gaussian2FuzzySet(ContinuousFuzzySet):
         if mean1 > mean2:
             raise ValueError("mean1 should be less equal than mean2")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
             
         super().__init__(partial(mf.gaussian2, 
@@ -592,6 +592,20 @@ class Gaussian2FuzzySet(ContinuousFuzzySet):
         self.__std2 = std2
 
 class GBellFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a generalized bell-shaped fuzzy set
+
+    Parameters
+    ----------
+    :param width: controls the width of the generalized bell fuzzy set (set = 1 for a Gaussian fuzzy set)
+    :param width: np.number
+
+    :param slope: the exponent of the generalized bell fuzzy set (set = 1 for a Gaussian Fuzzy set)
+    :param slope: np.number
+
+    :param center: the middle point of the generalized bell fuzzy set
+    :param center: np.number
+    '''  
     def __init__(self, 
                  width: np.number, 
                  slope: np.number,
@@ -614,7 +628,7 @@ class GBellFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(center), np.number):
             raise TypeError("center should be a number")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.gbell, 
@@ -627,6 +641,17 @@ class GBellFuzzySet(ContinuousFuzzySet):
         self.__center = center
 
 class SigmoidalFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a sigmoid fuzzy set
+
+    Parameters
+    ----------
+    :param width: controls the width of the sigmoid fuzzy set
+    :param width: np.number
+
+    :param center: the middle point of the sigmoid fuzzy set
+    :param center: np.number
+    '''  
     def __init__(self, 
                  width: np.number, 
                  center: np.number,
@@ -642,7 +667,7 @@ class SigmoidalFuzzySet(ContinuousFuzzySet):
         if not np.issubdtype(type(center), np.number):
             raise TypeError("center should be a number")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.sigmoidal, 
@@ -653,6 +678,23 @@ class SigmoidalFuzzySet(ContinuousFuzzySet):
         self.__center = center
 
 class DiffSigmoidalFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a fuzzy set defined by the difference of two sigmoids
+
+    Parameters
+    ----------
+    :param width1: controls the width of the first sigmoid fuzzy set
+    :param width1: np.number
+
+    :param center1: the middle point of the first sigmoid fuzzy set
+    :param center1: np.number
+
+    :param width2: controls the width of the second sigmoid fuzzy set
+    :param width2: np.number
+
+    :param center2: the middle point of the second sigmoid fuzzy set
+    :param center2: np.number
+    '''  
     def __init__(self, 
                  width1: np.number, 
                  center1: np.number,
@@ -682,7 +724,7 @@ class DiffSigmoidalFuzzySet(ContinuousFuzzySet):
         if center1 >= center2:
             raise ValueError("center1 should be less equal than center2")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.difference_sigmoidal, 
@@ -698,6 +740,23 @@ class DiffSigmoidalFuzzySet(ContinuousFuzzySet):
 
         
 class ProdSigmoidalFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a fuzzy set defined by the  product of two sigmoids
+
+    Parameters
+    ----------
+    :param width1: controls the width of the first sigmoid fuzzy set
+    :param width1: np.number
+
+    :param center1: the middle point of the first sigmoid fuzzy set
+    :param center1: np.number
+
+    :param width2: controls the width of the second sigmoid fuzzy set
+    :param width2: np.number
+
+    :param center2: the middle point of the second sigmoid fuzzy set
+    :param center2: np.number
+    '''  
     def __init__(self, 
                  width1: np.number, 
                  center1: np.number,
@@ -727,7 +786,7 @@ class ProdSigmoidalFuzzySet(ContinuousFuzzySet):
         if center1 >= center2:
             raise ValueError("center1 should be less equal than center2")
         
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.product_sigmoidal, 
@@ -742,6 +801,17 @@ class ProdSigmoidalFuzzySet(ContinuousFuzzySet):
         self.__center2 = center2
 
 class ZShapedFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a z-shaped fuzzy set (smoothed linear z)
+
+    Parameters
+    ----------
+    :param left_upper: the largest value for which the membership degree is 1
+    :param left_upper: np.number
+
+    :param right_lower: the smallest value for which the membership degree is 0
+    :param right_lower: np.number
+    '''  
     def __init__(self, 
                  left_upper: np.number, 
                  right_lower: np.number,
@@ -757,7 +827,7 @@ class ZShapedFuzzySet(ContinuousFuzzySet):
         if left_upper > right_lower:
             raise ValueError("left_upper should be less equal than right_lower ")
                 
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.z_shaped, 
@@ -768,6 +838,17 @@ class ZShapedFuzzySet(ContinuousFuzzySet):
         self.__right_lower = right_lower
 
 class SShapedFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a s-shaped fuzzy set (smoothed linear s)
+
+    Parameters
+    ----------
+    :param left_lower: the largest value for which the membership degree is 0
+    :param left_lower: np.number
+
+    :param right_upper: the smallest value for which the membership degree is 1
+    :param right_upper: np.number
+    '''  
     def __init__(self, 
                  left_lower: np.number, 
                  right_upper: np.number,
@@ -783,7 +864,7 @@ class SShapedFuzzySet(ContinuousFuzzySet):
         if left_lower > right_upper:
             raise ValueError("left_upper should be less equal than right_lower ")
 
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.s_shaped, 
@@ -794,6 +875,23 @@ class SShapedFuzzySet(ContinuousFuzzySet):
         self.__right_upper = right_upper
 
 class PiShapedFuzzySet(ContinuousFuzzySet):
+    '''
+    Implements a pi-shaped fuzzy set (smoothed trapezoidal)
+
+    Parameters
+    ----------
+    :param left_lower: the largest value for which the membership degree is 0
+    :param left_upper: np.number
+
+    :param left_upper: the smallest value for which the membership degree is 1
+    :param left_upper: np.number
+
+    :param right_upper: the largest value for which the membership degree is 1
+    :param right_upper: np.number
+
+    :param right_lower: the smallest value for which the membership degree is 0
+    :param right_lower: np.number
+    '''  
     def __init__(self, 
                  left_lower: np.number, 
                  left_upper: np.number,
@@ -817,7 +915,7 @@ class PiShapedFuzzySet(ContinuousFuzzySet):
         if not (left_lower <= left_upper < right_upper <= right_lower):
             raise ValueError("Parameters should be left_lower <= left_upper <= right_upper <= right_lower ")
                 
-        if bound == None:
+        if bound is None:
             bound=(-np.inf, np.inf)
 
         super().__init__(partial(mf.pi_shaped, 
@@ -830,3 +928,4 @@ class PiShapedFuzzySet(ContinuousFuzzySet):
         self.__left_upper = left_upper
         self.__right_upper = right_upper
         self.__right_lower = right_lower
+

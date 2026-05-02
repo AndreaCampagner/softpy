@@ -124,37 +124,7 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
         self.n_elite = n_elite
         self.is_fitted = False
 
-    
-    def fit(self, n_iters: int = 10, keep_history: bool = False, show_iters: bool = False, n_jobs: int = 1, backend: Union[ParallelBackendBase,str,None] = "loky"):
-        '''
-        Applies the genetic algorithm for a given number of iterations. Notice that the implemented recombination is non-standard as it is called two
-        times rather than only once. The algorithm allows for global state tracking in the selection function (as in stochastic universal selection) by
-        using an explictly defined state tracking variable (current_step). The individual candidates are randomly permuted at each iteration to avoid
-        ordering bias. The population is entirely replaced at each iteration (unless elitism is used).
-        '''
-        self.is_fitted = False
-        if n_iters < 1:
-            raise ValueError("n_iters must be larger than 0, was %d" % n_iters)
-        
-        if backend != None and n_jobs < 1:
-            raise ValueError("n_jobs must be an int larger than 0 when backend != None, was %d" % n_jobs)
-
-
-        if not self.elitism:
-            self.n_elite = 0
-        if (self.elitism and (self.pop_size + self.n_elite)%2 != 0) or (not self.elitism and self.pop_size % 2 != 0):
-            self.pop_size += 1
-
-        self.population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
-        self.fitness = [None] * self.population.shape[0]
-        self.best = None
-        self.fitness_best = -np.inf
-
-        if keep_history:
-            self.best_h = np.empty(n_iters+1, dtype=self.candidate_type)
-            self.fitness_h = np.zeros(n_iters+1)
-            self.fitness_h[:] = -np.inf
-
+    def _fit_par(self, n_iters: int = 10, keep_history: bool = False, show_iters: bool = False, n_jobs: int = 1, backend: Union[ParallelBackendBase,str,None] = "loky"):
         elab_tot = int(self.pop_size-self.n_elite)/2
         elab_thread = divide_number(elab_tot, n_jobs)
         
@@ -164,8 +134,6 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
 
         with Parallel(n_jobs = n_jobs, backend=backend) as parallel:
             for it in range(n_iters+1):
-                if show_iters:
-                    print(it)
 
                 idx = np.random.permutation(range(len(self.fitness)))
                 self.population = self.population[idx]
@@ -211,6 +179,79 @@ class GeneticAlgorithm(MetaHeuristicsAlgorithm):
 
                 serialized_pop = None
                 buffer_pop = None
+
+    def _fit_seq(self, n_iters: int = 10, keep_history: bool = False, show_iters: bool = False):
+        for it in range(n_iters+1):
+            if show_iters:
+                print(it)
+                for indiv in range(len(self.population)):
+                    print(self.population[indiv], " ", self.fitness[indiv])
+            idx = np.random.permutation(range(len(self.fitness)))
+            self.population = self.population[idx]
+            self.fitness = np.vectorize(self.fitness_func)(self.population) 
+            v = np.max(self.fitness)
+            self.best = self.population[np.argmax(self.fitness)] if v > self.fitness_best else self.best
+            self.fitness_best = v if v > self.fitness_best else self.fitness_best
+
+            if keep_history:
+                self.best_h[it] = self.best
+                self.fitness_h[it] = self.fitness_best
+
+            q = np.empty(self.pop_size, dtype=self.candidate_type)
+            if self.elitism:
+                q[:self.n_elite] = self.population[np.argsort(self.fitness)[::-1][:self.n_elite]]
+
+            sub = self.n_elite if self.elitism else 0
+            
+            iterations = int(self.pop_size-self.n_elite)/2
+            lst = np.empty(int(iterations)*2, dtype=type(self.population[0]))
+            current_step=None
+            for j in range(int(iterations)):  
+                px1, current_step = self.selection_func(self.fitness, current_step=current_step)
+                p1 = self.population[px1]
+                px2, current_step = self.selection_func(self.fitness, current_step=current_step)
+                p2 = self.population[px2]
+                lst[2*j] = p1.recombine(p2).mutate()
+                lst[2*j+1] = p2.recombine(p1).mutate()
+
+            q[sub:] = lst
+            self.population = q
+    
+
+    def fit(self, n_iters: int = 10, keep_history: bool = False, show_iters: bool = False, n_jobs: int = 1, backend: Union[ParallelBackendBase,str,None] = "loky"):
+        '''
+        Applies the genetic algorithm for a given number of iterations. Notice that the implemented recombination is non-standard as it is called two
+        times rather than only once. The algorithm allows for global state tracking in the selection function (as in stochastic universal selection) by
+        using an explictly defined state tracking variable (current_step). The individual candidates are randomly permuted at each iteration to avoid
+        ordering bias. The population is entirely replaced at each iteration (unless elitism is used).
+        '''
+        self.is_fitted = False
+        if n_iters < 1:
+            raise ValueError("n_iters must be larger than 0, was %d" % n_iters)
+        
+        if backend is not None and n_jobs < 1:
+            raise ValueError("n_jobs must be an int larger than 0 when backend != None, was %d" % n_jobs)
+
+
+        if not self.elitism:
+            self.n_elite = 0
+        if (self.elitism and (self.pop_size + self.n_elite)%2 != 0) or (not self.elitism and self.pop_size % 2 != 0):
+            self.pop_size += 1
+
+        self.population = np.array([self.candidate_type.generate(**self.kwargs) for i in range(self.pop_size)])
+        self.fitness = [None] * self.population.shape[0]
+        self.best = None
+        self.fitness_best = -np.inf
+
+        if keep_history:
+            self.best_h = np.empty(n_iters+1, dtype=self.candidate_type)
+            self.fitness_h = np.zeros(n_iters+1)
+            self.fitness_h[:] = -np.inf
+
+        if backend == None or n_jobs == 1:
+            self._fit_seq(n_iters, keep_history, show_iters)
+        else:
+            self._fit_par(n_iters, keep_history, show_iters, n_jobs, backend)
 
         self.is_fitted = True
         return self.best

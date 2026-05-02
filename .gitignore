@@ -8,3 +8,9 @@ img/
 .token
 install_script.txt
 setup.py
+*.png
+*.dot
+*.svg
+*.zip
+*.pdf
+.ipynb_checkpoints
